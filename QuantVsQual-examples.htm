@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!--
+    Quantitative vs Qualitative: What Each Adds (O&P Examples)
+    ----------------------------------------------------------
+    Focus:
+      Expand the idea: "Quantitative tells you if something changed" by showing that
+      quantitative also provides direction, magnitude, and uncertainty/precision.
+      Then show how qualitative complements by explaining meaning, experience, and context.
+
+    Uses examples consistent with the prior O&P ladder HTML:
+      - Prosthetics: residual limb pain, suspension type, socket interface, MP knee mode, gait symmetry
+      - Orthotics: AFO wear time, comfort, solid vs articulated AFO, stiffness tuning, alignment modification
+
+    Interaction:
+      - Click a tile to open it.
+      - Toggle Quant vs Qual layers.
+      - Use "Swap Examples" to cycle through alternative O&P scenarios (Set A / Set B).
+
+    Developed by Professor Fedel using ChatGPT 5.2 - January 2026
+  -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quant vs Qual in O&amp;P: Direction • Magnitude • Uncertainty • Meaning</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --panel:#121a26;
+      --panel2:#0f1621;
+      --text:#e7eefc;
+      --muted:#a9b7d0;
+      --line:#2a3a55;
+      --accent:#7dd3fc;   /* quantitative */
+      --accent2:#a78bfa;  /* qualitative */
+      --good:#34d399;
+      --warn:#fbbf24;
+      --bad:#fb7185;
+      --shadow: 0 10px 24px rgba(0,0,0,.35);
+      --radius: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background:
+        radial-gradient(1200px 600px at 20% 10%, rgba(125,211,252,.18), transparent 60%),
+        radial-gradient(900px 500px at 80% 30%, rgba(167,139,250,.16), transparent 55%),
+        var(--bg);
+      color:var(--text);
+    }
+    header{
+      padding:20px 18px 12px;
+      max-width:1150px;
+      margin:0 auto;
+    }
+    h1{
+      margin:0 0 6px;
+      font-size: clamp(20px, 2.2vw, 30px);
+      letter-spacing:.2px;
+    }
+    .subtitle{
+      margin:0 0 14px;
+      color:var(--muted);
+      line-height:1.4;
+      font-size: 14px;
+    }
+
+    .toolbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      margin: 10px 0 8px;
+    }
+    button{
+      appearance:none;
+      border:1px solid rgba(231,238,252,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      box-shadow: 0 6px 16px rgba(0,0,0,.25);
+      font-weight:700;
+      letter-spacing:.1px;
+      transition: transform .06s ease, border-color .2s ease, background .2s ease;
+      font-size: 13px;
+      user-select:none;
+    }
+    button:hover{ border-color: rgba(125,211,252,.35); }
+    button:active{ transform: translateY(1px); }
+
+    .toggleGroup{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      padding:8px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(231,238,252,.12);
+      background: rgba(18,26,38,.65);
+      color:var(--muted);
+      font-size: 12px;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(231,238,252,.12);
+      background: rgba(15,22,33,.55);
+      cursor:pointer;
+      user-select:none;
+      font-weight:700;
+      color: rgba(231,238,252,.92);
+    }
+    .dot{
+      width:10px;height:10px;border-radius:999px;
+      box-shadow:0 0 0 3px rgba(0,0,0,.18) inset;
+    }
+    .dot.q{ background: var(--accent); }
+    .dot.qual{ background: var(--accent2); }
+    .chip.off{
+      opacity:.45;
+      border-style:dashed;
+    }
+
+    main{
+      max-width:1150px;
+      margin:0 auto;
+      padding: 6px 18px 32px;
+    }
+
+    .hero{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid rgba(231,238,252,.10);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px 14px;
+      display:grid;
+      gap:12px;
+    }
+    .heroGrid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:12px;
+    }
+    @media (min-width: 900px){
+      .heroGrid{ grid-template-columns: 1.1fr .9fr; }
+    }
+    .heroCallout{
+      border:1px solid rgba(231,238,252,.10);
+      background: rgba(15,22,33,.55);
+      border-radius: 14px;
+      padding: 12px 12px;
+      line-height:1.35;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .heroCallout b{ color: var(--text); }
+    .heroCallout .mini{
+      margin-top:10px;
+      font-family:var(--mono);
+      font-size: 12px;
+      color: rgba(231,238,252,.88);
+      border:1px dashed rgba(231,238,252,.14);
+      border-radius: 12px;
+      padding:10px 10px;
+      background: rgba(18,26,38,.35);
+    }
+
+    .legend{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .legendItem{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(231,238,252,.12);
+      background: rgba(18,26,38,.45);
+    }
+
+    .grid{
+      margin-top: 14px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:12px;
+    }
+    @media (min-width: 820px){
+      .grid{ grid-template-columns: 1fr 1fr; }
+    }
+
+    .tile{
+      border:1px solid rgba(231,238,252,.10);
+      border-radius: var(--radius);
+      background: rgba(15,22,33,.55);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .tileTop{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+      padding: 12px 12px;
+      cursor:pointer;
+      user-select:none;
+      background: rgba(18,26,38,.45);
+      border-bottom: 1px solid rgba(231,238,252,.08);
+    }
+    .tileTop:hover{ background: rgba(18,26,38,.62); }
+    .tileTitle{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:0;
+    }
+    .tileTitle .kicker{
+      font-family:var(--mono);
+      font-size: 11px;
+      opacity:.9;
+      letter-spacing:.3px;
+      color: rgba(231,238,252,.80);
+    }
+    .tileTitle h2{
+      margin:0;
+      font-size: 15px;
+      letter-spacing:.2px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .tileTitle p{
+      margin:0;
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height:1.35;
+    }
+    .openPill{
+      font-family:var(--mono);
+      font-size: 11px;
+      padding:6px 8px;
+      border-radius:10px;
+      border:1px solid rgba(231,238,252,.12);
+      background: rgba(15,22,33,.55);
+      color: rgba(231,238,252,.85);
+      white-space:nowrap;
+      align-self:flex-start;
+    }
+    .tileBody{
+      display:none;
+      padding: 12px 12px 12px;
+    }
+    .tileBody.open{ display:block; }
+
+    .row{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    @media (min-width: 540px){
+      .row{ grid-template-columns: 1fr 1fr; }
+    }
+    .box{
+      border-radius: 14px;
+      padding: 10px 10px;
+      border:1px solid rgba(231,238,252,.10);
+      background: rgba(18,26,38,.35);
+      overflow:hidden;
+    }
+    .boxHeader{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-bottom:6px;
+      font-weight:900;
+      letter-spacing:.2px;
+      font-size: 12.5px;
+    }
+    .boxHeader .dot{ width:9px; height:9px; }
+    .box p{
+      margin:0;
+      color: var(--muted);
+      line-height:1.35;
+      font-size: 12.5px;
+    }
+    .pillLine{
+      margin-top:10px;
+      border-radius: 14px;
+      padding: 10px 10px;
+      border:1px dashed rgba(231,238,252,.14);
+      background: rgba(15,22,33,.35);
+      font-size: 12.5px;
+      line-height:1.4;
+      color: var(--muted);
+    }
+    .pillLine b{ color: var(--text); }
+
+    .qOnly{ border-color: rgba(125,211,252,.30); }
+    .qualOnly{ border-color: rgba(167,139,250,.30); }
+
+    footer{
+      max-width:1150px;
+      margin:0 auto;
+      padding: 0 18px 22px;
+      color:var(--muted);
+      font-size: 12px;
+    }
+    .tagline{
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(231,238,252,.08);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .kbd{
+      font-family:var(--mono);
+      border:1px solid rgba(231,238,252,.14);
+      border-bottom-color: rgba(231,238,252,.22);
+      padding: 2px 6px;
+      border-radius: 8px;
+      background: rgba(15,22,33,.55);
+      color: rgba(231,238,252,.92);
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <h1>Quantitative vs Qualitative in O&amp;P</h1>
+  <p class="subtitle">
+    Quantitative doesn’t just say <i>if</i> something changed — it quantifies <b>direction</b>, <b>magnitude</b>, and <b>uncertainty/precision</b>.
+    Qualitative complements by explaining <b>meaning</b>, <b>experience</b>, and <b>context</b>.
+  </p>
+
+  <div class="toolbar">
+    <button id="expandAllBtn" type="button">Expand All</button>
+    <button id="collapseAllBtn" type="button">Collapse All</button>
+    <button id="swapBtn" type="button">Swap Examples (Set A/B)</button>
+
+    <div class="toggleGroup" aria-label="Layer toggles">
+      <span style="font-weight:800;color:var(--text);">Show:</span>
+      <span id="toggleQ" class="chip"><span class="dot q"></span>Quant</span>
+      <span id="toggleQual" class="chip"><span class="dot qual"></span>Qual</span>
+      <span style="opacity:.9">Keys: <span class="kbd">E</span> expand • <span class="kbd">C</span> collapse • <span class="kbd">S</span> swap • <span class="kbd">Q</span>/<span class="kbd">L</span> toggle</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="heroGrid">
+      <div class="heroCallout">
+        <b>Upgrade the sound bite for students</b><br>
+        Instead of: “Quantitative tells you if something changed.”<br><br>
+        Use: <b>Quantitative tells you whether change occurred, the direction, the amount, and the uncertainty of that estimate.</b><br>
+        And: <b>Qualitative tells you how the change was experienced and why it mattered (or didn’t).</b>
+        <div class="mini">
+          Example template (say it out loud):<br>
+          “Pain decreased by <b>2.1/10</b> (direction &amp; magnitude), with a <b>95% CI of 1.4–2.8</b> (uncertainty).<br>
+          Patients reported ‘<b>pressure felt more evenly distributed</b>’ and ‘<b>donning was easier</b>’ (meaning/context).”
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="legendItem"><span class="dot q"></span><b style="color:var(--text)">Quant</b> = direction • magnitude • uncertainty</div>
+        <div class="legendItem"><span class="dot qual"></span><b style="color:var(--text)">Qual</b> = meaning • experience • context</div>
+        <div class="legendItem" style="opacity:.95">Click any tile to open it. Toggle layers to emphasize what you want students to see.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid" id="tiles"></section>
+</main>
+
+<footer>
+  <div>
+    Teaching move: after opening a tile, ask students to write a one-sentence conclusion that includes
+    <b>direction + magnitude + uncertainty</b>, then add a second sentence that includes the <b>qualitative meaning</b>.
+  </div>
+  <div class="tagline">
+    <div>Developed by <b>Professor Fedel</b> using <b>ChatGPT 5.2</b> • January 2026</div>
+    <div style="opacity:.9">No external libraries • runs as a local .html file</div>
+  </div>
+</footer>
+
+<script>
+  // -----------------------------
+  // Example sets (A/B) derived from the prior ladder examples
+  // Each tile includes a single O&P scenario and then splits into:
+  //   Quant: direction/magnitude/uncertainty + typical analyses
+  //   Qual: meaning/experience/context + typical analyses
+  // -----------------------------
+
+  const sets = [
+    // -------------------- SET A --------------------
+    [
+      {
+        kicker: "PROSTHETICS • Intervention",
+        title: "New socket interface → residual limb pain",
+        question: "Does a new socket interface reduce residual limb pain over 8 weeks?",
+        quant: {
+          header: "Quant gives direction • magnitude • uncertainty",
+          bullets: [
+            "Direction: pain scores decrease (↓) or increase (↑).",
+            "Magnitude: e.g., −2.1 points on a 0–10 pain scale; or −18% from baseline.",
+            "Uncertainty: 95% CI around the change; variability across users.",
+            "Common stats: paired t-test / mixed model; effect size; responder analysis."
+          ]
+        },
+        qual: {
+          header: "Qual gives meaning • experience • context",
+          bullets: [
+            "What changed for the patient: pressure distribution, skin tolerance, donning ease.",
+            "Why it helped (or didn’t): activity patterns, sweat, fit days vs non-fit days.",
+            "Unexpected tradeoffs: comfort improved but suspension felt less secure.",
+            "Common methods: interviews; thematic analysis; patient journey narratives."
+          ]
+        },
+        teach: "Have students write the quantitative conclusion as: “Pain changed by ___ (95% CI ___), direction ___.” Then add the qualitative “why/how” sentence."
+      },
+      {
+        kicker: "ORTHOTICS • Mechanism / Tuning",
+        title: "AFO stiffness tuning → knee hyperextension",
+        question: "Does stiffness tuning reduce knee hyperextension over 4–6 weeks?",
+        quant: {
+          header: "Quant gives direction • magnitude • uncertainty",
+          bullets: [
+            "Direction: knee hyperextension angle decreases (↓) toward neutral.",
+            "Magnitude: e.g., −6.5° hyperextension; +0.12 m/s gait speed.",
+            "Uncertainty: CI around angle change; day-to-day variability; between-subject spread.",
+            "Common stats: pre-post; crossover; minimal detectable change (MDC) if available."
+          ]
+        },
+        qual: {
+          header: "Qual gives meaning • experience • context",
+          bullets: [
+            "Patients’ meaning: “more stable at midstance,” “less fear of falling.”",
+            "Context: different terrain; fatigue; shoes; compliance with wearing schedule.",
+            "Tradeoffs: improved knee control but “feels stiff on uneven ground.”",
+            "Common methods: open-ended surveys; interviews; clinician field notes."
+          ]
+        },
+        teach: "Ask: “Even if the angle improves, would the patient keep wearing it?” Qualitative answers that."
+      },
+      {
+        kicker: "PROSTHETICS • Group comparison",
+        title: "Vacuum vs pin suspension → pain/comfort",
+        question: "Do elevated vacuum vs pin suspension users differ in pain prevalence or comfort?",
+        quant: {
+          header: "Quant gives direction • magnitude • uncertainty",
+          bullets: [
+            "Direction: vacuum group has lower/higher mean pain or prevalence.",
+            "Magnitude: mean difference; risk difference; odds ratio with CI.",
+            "Uncertainty: CI; p-value; adjustment for confounding (K-level, etiology).",
+            "Common stats: t-test/ANOVA/χ²; regression; propensity matching."
+          ]
+        },
+        qual: {
+          header: "Qual gives meaning • experience • context",
+          bullets: [
+            "Why one system is preferred: donning complexity, skin tolerance, perceived security.",
+            "Contextual constraints: dexterity, time, travel, maintenance burden.",
+            "Explains adoption patterns: “works great… when I have time,” vs real life.",
+            "Common methods: focus groups; comparative thematic analysis by group."
+          ]
+        },
+        teach: "Use this to reinforce: “Group differences aren’t automatically causal.” Qualitative often reveals the selection bias reasons."
+      },
+      {
+        kicker: "ORTHOTICS • Use / adherence",
+        title: "Drop foot: AFO daily wear time",
+        question: "What proportion of patients wear an AFO daily, and for how many hours?",
+        quant: {
+          header: "Quant gives direction • magnitude • uncertainty",
+          bullets: [
+            "Direction isn’t a change here—quant gives scale: % daily users; hours/day.",
+            "Magnitude: distribution (median, IQR) captures skewed adherence patterns.",
+            "Uncertainty: CI for proportions; sampling error; site-to-site variability.",
+            "Common stats: descriptive tables; histograms; stratified summaries."
+          ]
+        },
+        qual: {
+          header: "Qual gives meaning • experience • context",
+          bullets: [
+            "Why people don’t wear it: comfort, aesthetics, heat, shoes, inconvenience.",
+            "When they wear it: only outside, only work, only long distances.",
+            "Meaning: identity, stigma, and independence themes.",
+            "Common methods: short interviews; content analysis of open-ended responses."
+          ]
+        },
+        teach: "Great example to show: quantitative describes the ‘how much,’ qualitative explains the ‘why.’"
+      }
+    ],
+
+    // -------------------- SET B --------------------
+    [
+      {
+        kicker: "PROSTHETICS • Function / biomechanics",
+        title: "Gait symmetry ↔ socket fit / stability",
+        question: "Is gait symmetry associated with socket fit score or perceived stability?",
+        quant: {
+          header: "Quant gives direction • magnitude • uncertainty",
+          bullets: [
+            "Direction: higher stability relates to greater symmetry (or not).",
+            "Magnitude: correlation coefficient (r) or regression slope (β).",
+            "Uncertainty: CI around r/β; sensitivity to walking speed as a covariate.",
+            "Common stats: correlation; multiple regression; partial correlation."
+          ]
+        },
+        qual: {
+          header: "Qual gives meaning • experience • context",
+          bullets: [
+            "What ‘stability’ means to patients: trust, fear, confidence, attentional load.",
+            "Context: symmetry may degrade with fatigue or uneven surfaces.",
+            "Explains odd findings: ‘I feel stable but avoid loading the limb.’",
+            "Common methods: think-aloud gait walk-through; thematic coding."
+          ]
+        },
+        teach: "Have students propose a confounder (e.g., speed). Then ask how qualitative data could reveal compensations."
+      },
+      {
+        kicker: "ORTHOTICS • Device comparison",
+        title: "Carbon fiber vs thermoplastic AFOs",
+        question: "Do carbon fiber AFO users differ from thermoplastic users in energy cost or satisfaction?",
+        quant: {
+          header: "Quant gives direction • magnitude • uncertainty",
+          bullets: [
+            "Direction: carbon fiber lowers/higher VO₂ or improves satisfaction scores.",
+            "Magnitude: mean differences; effect sizes; clinical thresholds for meaningful change.",
+            "Uncertainty: CI; subgroup variability by diagnosis/severity.",
+            "Common stats: group comparisons; ANCOVA controlling baseline function."
+          ]
+        },
+        qual: {
+          header: "Qual gives meaning • experience • context",
+          bullets: [
+            "Why one wins in real life: shoe compatibility, noise, durability, comfort in heat.",
+            "Context: ‘works great for long walks’ vs ‘hates stairs.’",
+            "Tradeoffs: performance vs comfort vs cosmetics.",
+            "Common methods: comparative interviews; matrix coding by device type."
+          ]
+        },
+        teach: "Use this to show: even if VO₂ improves, adoption can fail for everyday practical reasons."
+      },
+      {
+        kicker: "PROSTHETICS • Mode manipulation (within-subject)",
+        title: "MP knee control mode change",
+        question: "Does changing microprocessor knee mode alter gait mechanics and perceived stability?",
+        quant: {
+          header: "Quant gives direction • magnitude • uncertainty",
+          bullets: [
+            "Direction: stability ratings improve; fall-risk proxies decrease; kinematics shift.",
+            "Magnitude: within-subject differences between modes; effect size (paired).",
+            "Uncertainty: CI across repeated trials; test-retest reliability considerations.",
+            "Common stats: crossover/ABBA; repeated measures ANOVA; ICC for reliability."
+          ]
+        },
+        qual: {
+          header: "Qual gives meaning • experience • context",
+          bullets: [
+            "Meaning: ‘I stopped thinking about the knee,’ ‘less anxiety on ramps.’",
+            "Context: mode may help ramps but feel ‘too stiff’ on flat ground.",
+            "Explains preference: comfort with responsiveness vs predictability.",
+            "Common methods: post-trial interviews; preference elicitation; thematic comparison."
+          ]
+        },
+        teach: "This tile makes ‘mechanical performance’ vs ‘user acceptance’ very obvious."
+      },
+      {
+        kicker: "ORTHOTICS • Alignment intervention",
+        title: "Alignment modification → knee hyperextension",
+        question: "Does an alignment modification reduce knee hyperextension in a stroke patient cohort?",
+        quant: {
+          header: "Quant gives direction • magnitude • uncertainty",
+          bullets: [
+            "Direction: hyperextension decreases; step length symmetry may improve.",
+            "Magnitude: degrees of knee angle change; change in falls confidence scores.",
+            "Uncertainty: CI; responder variability; whether change exceeds MDC/SEM.",
+            "Common stats: pre-post; mixed models; responder thresholds."
+          ]
+        },
+        qual: {
+          header: "Qual gives meaning • experience • context",
+          bullets: [
+            "Meaning: ‘I feel safer,’ ‘I can walk farther,’ or ‘it feels unstable.’",
+            "Context: changes in footwear, terrain, fatigue; caregiver support.",
+            "Explains non-responders: spasticity fluctuations; discomfort; donning issues.",
+            "Common methods: structured interviews; field notes; longitudinal narrative."
+          ]
+        },
+        teach: "Ask: If half improve and half worsen, what does the mean hide? Quant shows dispersion; qual explains why subgroups differ."
+      }
+    ]
+  ];
+
+  let setIndex = 0;
+  let showQuant = true;
+  let showQual = true;
+
+  const tilesEl = document.getElementById("tiles");
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function buildList(items){
+    return `<ul style="margin:8px 0 0 18px; padding:0; color: var(--muted); font-size:12.5px; line-height:1.4;">
+      ${items.map(x => `<li>${escapeHtml(x)}</li>`).join("")}
+    </ul>`;
+  }
+
+  function render(){
+    tilesEl.innerHTML = "";
+    const data = sets[setIndex];
+
+    data.forEach((t, idx) => {
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.dataset.idx = String(idx);
+
+      const top = document.createElement("div");
+      top.className = "tileTop";
+      top.setAttribute("role","button");
+      top.setAttribute("tabindex","0");
+      top.setAttribute("aria-expanded","false");
+
+      const title = document.createElement("div");
+      title.className = "tileTitle";
+      title.innerHTML = `
+        <div class="kicker">${escapeHtml(t.kicker)}</div>
+        <h2>${escapeHtml(t.title)}</h2>
+        <p><b style="color:var(--text)">Question:</b> ${escapeHtml(t.question)}</p>
+      `;
+
+      const pill = document.createElement("div");
+      pill.className = "openPill";
+      pill.textContent = "OPEN";
+
+      top.appendChild(title);
+      top.appendChild(pill);
+
+      const body = document.createElement("div");
+      body.className = "tileBody";
+      body.innerHTML = `
+        <div class="pillLine"><b>Teaching prompt:</b> ${escapeHtml(t.teach)}</div>
+        <div class="row">
+          <div class="box qOnly" data-kind="quant">
+            <div class="boxHeader"><span class="dot q"></span>${escapeHtml(t.quant.header)}</div>
+            ${buildList(t.quant.bullets)}
+          </div>
+          <div class="box qualOnly" data-kind="qual">
+            <div class="boxHeader"><span class="dot qual"></span>${escapeHtml(t.qual.header)}</div>
+            ${buildList(t.qual.bullets)}
+          </div>
+        </div>
+      `;
+
+      function applyLayerVisibility(){
+        const qBox = body.querySelector('[data-kind="quant"]');
+        const lBox = body.querySelector('[data-kind="qual"]');
+        if(qBox) qBox.style.display = showQuant ? "block" : "none";
+        if(lBox) lBox.style.display = showQual ? "block" : "none";
+
+        // If only one layer is visible on wide screens, let it stretch better
+        const row = body.querySelector(".row");
+        if(row){
+          const both = showQuant && showQual;
+          row.style.gridTemplateColumns = both ? "" : "1fr";
+        }
+      }
+
+      function toggleOpen(){
+        const isOpen = body.classList.toggle("open");
+        top.setAttribute("aria-expanded", String(isOpen));
+        pill.textContent = isOpen ? "CLOSE" : "OPEN";
+        if(isOpen) applyLayerVisibility();
+      }
+
+      top.addEventListener("click", toggleOpen);
+      top.addEventListener("keydown", (e) => {
+        if(e.key === "Enter" || e.key === " "){
+          e.preventDefault();
+          toggleOpen();
+        }
+      });
+
+      tile.appendChild(top);
+      tile.appendChild(body);
+      tilesEl.appendChild(tile);
+    });
+
+    // After render, update chip states & apply layer visibility to open tiles
+    syncChips();
+    applyLayersToAllOpen();
+  }
+
+  function applyLayersToAllOpen(){
+    document.querySelectorAll(".tileBody.open").forEach(body => {
+      const qBox = body.querySelector('[data-kind="quant"]');
+      const lBox = body.querySelector('[data-kind="qual"]');
+      if(qBox) qBox.style.display = showQuant ? "block" : "none";
+      if(lBox) lBox.style.display = showQual ? "block" : "none";
+      const row = body.querySelector(".row");
+      if(row){
+        const both = showQuant && showQual;
+        row.style.gridTemplateColumns = both ? "" : "1fr";
+      }
+    });
+  }
+
+  function setAll(open){
+    document.querySelectorAll(".tile").forEach(tile => {
+      const top = tile.querySelector(".tileTop");
+      const body = tile.querySelector(".tileBody");
+      const pill = tile.querySelector(".openPill");
+      if(open){
+        body.classList.add("open");
+        top.setAttribute("aria-expanded","true");
+        pill.textContent = "CLOSE";
+      }else{
+        body.classList.remove("open");
+        top.setAttribute("aria-expanded","false");
+        pill.textContent = "OPEN";
+      }
+    });
+    applyLayersToAllOpen();
+  }
+
+  function swap(){
+    setIndex = (setIndex + 1) % sets.length;
+    render();
+  }
+
+  function syncChips(){
+    const qChip = document.getElementById("toggleQ");
+    const lChip = document.getElementById("toggleQual");
+    qChip.classList.toggle("off", !showQuant);
+    lChip.classList.toggle("off", !showQual);
+
+    // Never allow both off (keep at least one visible)
+    if(!showQuant && !showQual){
+      showQuant = true;
+      qChip.classList.remove("off");
+    }
+  }
+
+  function toggleQuant(){
+    showQuant = !showQuant;
+    if(!showQuant && !showQual) showQual = true;
+    syncChips();
+    applyLayersToAllOpen();
+  }
+
+  function toggleQual(){
+    showQual = !showQual;
+    if(!showQuant && !showQual) showQuant = true;
+    syncChips();
+    applyLayersToAllOpen();
+  }
+
+  // Wire up UI
+  document.getElementById("expandAllBtn").addEventListener("click", () => setAll(true));
+  document.getElementById("collapseAllBtn").addEventListener("click", () => setAll(false));
+  document.getElementById("swapBtn").addEventListener("click", swap);
+  document.getElementById("toggleQ").addEventListener("click", toggleQuant);
+  document.getElementById("toggleQual").addEventListener("click", toggleQual);
+
+  // Keyboard shortcuts
+  document.addEventListener("keydown", (e) => {
+    if(e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+    if(e.key === "E" || e.key === "e") setAll(true);
+    if(e.key === "C" || e.key === "c") setAll(false);
+    if(e.key === "S" || e.key === "s") swap();
+    if(e.key === "Q" || e.key === "q") toggleQuant();
+    if(e.key === "L" || e.key === "l") toggleQual();
+  });
+
+  // Init
+  render();
+</script>
+</body>
+</html>
