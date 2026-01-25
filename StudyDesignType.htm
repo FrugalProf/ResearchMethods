@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!--
+    O&P Study Design Progression Visual (Parallel Ladders)
+    ------------------------------------------------------
+    Purpose:
+      A simple interactive visual to teach the progression of study designs
+      from Descriptive → Correlational → Causal-Comparative → Experimental/Quasi.
+      Displayed as two parallel ladders: Prosthetics vs Orthotics.
+
+    How to use (in class):
+      - Click any rung to expand the details for that stage.
+      - Use "Expand All" to show the full progression at once.
+      - Use "Swap Examples" to cycle through alternate O&P examples.
+
+    Developed by Professor Fedel using ChatGPT 5.2 - January 2026
+  -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>O&amp;P Study Design Progression (Parallel Visual)</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --panel:#121a26;
+      --panel2:#0f1621;
+      --text:#e7eefc;
+      --muted:#a9b7d0;
+      --line:#2a3a55;
+      --accent:#7dd3fc;
+      --accent2:#a78bfa;
+      --good:#34d399;
+      --warn:#fbbf24;
+      --bad:#fb7185;
+      --shadow: 0 10px 24px rgba(0,0,0,.35);
+      --radius: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background: radial-gradient(1200px 600px at 20% 10%, rgba(125,211,252,.18), transparent 60%),
+                  radial-gradient(900px 500px at 80% 30%, rgba(167,139,250,.16), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+    }
+    header{
+      padding:20px 18px 10px;
+      max-width:1100px;
+      margin:0 auto;
+    }
+    h1{
+      margin:0 0 6px;
+      font-size: clamp(20px, 2.2vw, 28px);
+      letter-spacing:.2px;
+    }
+    .subtitle{
+      color:var(--muted);
+      margin:0 0 14px;
+      line-height:1.35;
+      font-size: 14px;
+    }
+    .toolbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      margin: 10px 0 10px;
+    }
+    button{
+      appearance:none;
+      border:1px solid rgba(231,238,252,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      box-shadow: 0 6px 16px rgba(0,0,0,.25);
+      font-weight:600;
+      letter-spacing:.1px;
+      transition: transform .06s ease, border-color .2s ease, background .2s ease;
+      font-size: 13px;
+      user-select:none;
+    }
+    button:hover{ border-color: rgba(125,211,252,.35); }
+    button:active{ transform: translateY(1px); }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(231,238,252,.12);
+      background: rgba(18,26,38,.65);
+      color:var(--muted);
+      font-size: 12px;
+    }
+    .pill strong{ color: var(--text); font-weight:700; }
+    main{
+      max-width:1100px;
+      margin:0 auto;
+      padding: 6px 18px 34px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+    }
+    @media (min-width: 880px){
+      .grid{
+        grid-template-columns: 1fr 1fr;
+        gap:16px;
+      }
+    }
+
+    .ladder{
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+      border:1px solid rgba(231,238,252,.10);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .ladderHead{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      padding: 14px 14px 12px;
+      background: rgba(18,26,38,.75);
+      border-bottom: 1px solid rgba(231,238,252,.08);
+    }
+    .ladderTitle{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .ladderTitle h2{
+      margin:0;
+      font-size: 16px;
+      letter-spacing:.2px;
+    }
+    .ladderTitle p{
+      margin:0;
+      color:var(--muted);
+      font-size: 12.5px;
+      line-height:1.3;
+    }
+    .badge{
+      font-family:var(--mono);
+      font-size: 11px;
+      padding:6px 8px;
+      border-radius:10px;
+      border:1px solid rgba(231,238,252,.12);
+      color: rgba(231,238,252,.9);
+      background: rgba(15,22,33,.6);
+      white-space:nowrap;
+      align-self:flex-start;
+    }
+
+    .rungs{
+      padding: 10px 10px 12px;
+      background: rgba(15,22,33,.55);
+    }
+
+    .rung{
+      border:1px solid rgba(231,238,252,.10);
+      border-radius: 14px;
+      background: rgba(18,26,38,.55);
+      margin: 10px 0;
+      overflow:hidden;
+    }
+    .rungTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding: 12px 12px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .rungTop:hover{
+      background: rgba(18,26,38,.75);
+    }
+    .rungLeft{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+    .stepDot{
+      width:12px;height:12px;border-radius: 999px;
+      flex:0 0 auto;
+      box-shadow: 0 0 0 3px rgba(0,0,0,.18) inset;
+    }
+    .stepDot.descriptive{ background: var(--accent); }
+    .stepDot.corr{ background: var(--good); }
+    .stepDot.cc{ background: var(--warn); }
+    .stepDot.exp{ background: var(--bad); }
+
+    .rungLabel{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width:0;
+    }
+    .rungLabel .name{
+      font-weight:800;
+      letter-spacing:.2px;
+      font-size: 13.5px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .rungLabel .hint{
+      color: var(--muted);
+      font-size: 12px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .chev{
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      padding: 6px 8px;
+      border-radius: 10px;
+      border:1px solid rgba(231,238,252,.10);
+      background: rgba(15,22,33,.55);
+      flex:0 0 auto;
+    }
+
+    .rungBody{
+      display:none;
+      padding: 0 12px 12px;
+      border-top: 1px solid rgba(231,238,252,.08);
+    }
+    .rungBody.open{ display:block; }
+    .cards{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+      margin-top:12px;
+    }
+    @media (min-width: 540px){
+      .cards{
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    .card{
+      border:1px solid rgba(231,238,252,.10);
+      background: rgba(15,22,33,.55);
+      border-radius: 14px;
+      padding: 10px 10px;
+    }
+    .card h3{
+      margin:0 0 6px;
+      font-size: 12.8px;
+      letter-spacing:.2px;
+      color: rgba(231,238,252,.95);
+    }
+    .card p{
+      margin:0;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.35;
+    }
+    .keyline{
+      margin-top:10px;
+      padding: 10px 10px;
+      border-radius: 14px;
+      border:1px dashed rgba(231,238,252,.14);
+      background: rgba(18,26,38,.35);
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.4;
+    }
+    .keyline b{ color: var(--text); }
+
+    footer{
+      max-width:1100px;
+      margin:0 auto;
+      padding: 0 18px 22px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .tagline{
+      margin-top: 8px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(231,238,252,.08);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .kbd{
+      font-family:var(--mono);
+      border:1px solid rgba(231,238,252,.14);
+      border-bottom-color: rgba(231,238,252,.22);
+      padding: 2px 6px;
+      border-radius: 8px;
+      background: rgba(15,22,33,.55);
+      color: rgba(231,238,252,.92);
+    }
+    a{ color: var(--accent); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+  </style>
+</head>
+
+<body>
+<header>
+  <h1>O&amp;P Study Design Progression — Parallel Visual (Prosthetics vs Orthotics)</h1>
+  <p class="subtitle">
+    Click a rung to reveal examples at that design stage. The logic stays the same; only the O&amp;P context changes.
+  </p>
+
+  <div class="toolbar">
+    <button id="expandAllBtn" type="button" title="Open all rungs">Expand All</button>
+    <button id="collapseAllBtn" type="button" title="Close all rungs">Collapse All</button>
+    <button id="swapBtn" type="button" title="Cycle to alternate examples">Swap Examples</button>
+    <span class="pill"><strong>Teaching cue:</strong> Describe → Relate → Compare → Test</span>
+    <span class="pill"><strong>Keys:</strong> <span class="kbd">Click</span> rung • <span class="kbd">E</span> expand all • <span class="kbd">C</span> collapse all • <span class="kbd">S</span> swap</span>
+  </div>
+</header>
+
+<main>
+  <div class="grid" id="grid">
+    <!-- Prosthetics Ladder -->
+    <section class="ladder" aria-label="Prosthetics Ladder">
+      <div class="ladderHead">
+        <div class="ladderTitle">
+          <h2>Prosthetics Ladder</h2>
+          <p>Examples focus on sockets, suspension, knees/feet, and gait outcomes.</p>
+        </div>
+        <div class="badge">PROSTHETICS</div>
+      </div>
+      <div class="rungs" id="prostheticsRungs"></div>
+    </section>
+
+    <!-- Orthotics Ladder -->
+    <section class="ladder" aria-label="Orthotics Ladder">
+      <div class="ladderHead">
+        <div class="ladderTitle">
+          <h2>Orthotics Ladder</h2>
+          <p>Examples focus on AFO design, stiffness, alignment, and functional outcomes.</p>
+        </div>
+        <div class="badge">ORTHOTICS</div>
+      </div>
+      <div class="rungs" id="orthoticsRungs"></div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div>
+    Tip: Ask students to re-write one “descriptive” question into a correlational question, then a causal-comparative, then an experimental.
+  </div>
+  <div class="tagline">
+    <div>Developed by <b>Professor Fedel</b> using <b>ChatGPT 5.2</b> • January 2026</div>
+    <div style="opacity:.9">Local file-friendly (no external libraries)</div>
+  </div>
+</footer>
+
+<script>
+  // -----------------------------
+  // Data: Two parallel ladders
+  // Each rung includes: stage + question + examples for two "sets" (A/B)
+  // The "Swap Examples" button flips A↔B without changing the ladder logic.
+  // -----------------------------
+
+  const stages = [
+    {
+      key: "descriptive",
+      dotClass: "descriptive",
+      name: "DESCRIPTIVE",
+      hint: "What exists? (No manipulation; no group tests required)"
+    },
+    {
+      key: "corr",
+      dotClass: "corr",
+      name: "CORRELATIONAL",
+      hint: "What is related? (Associations; still no manipulation)"
+    },
+    {
+      key: "cc",
+      dotClass: "cc",
+      name: "CAUSAL–COMPARATIVE",
+      hint: "Who differs? (Existing groups; no random assignment)"
+    },
+    {
+      key: "exp",
+      dotClass: "exp",
+      name: "EXPERIMENTAL / QUASI",
+      hint: "What causes change? (Manipulate something; measure outcomes)"
+    }
+  ];
+
+  const prostheticsSets = [
+    // Set A
+    [
+      {
+        title: "Prevalence / Description",
+        what: "What proportion of transtibial amputees report residual limb pain while using a prosthesis?",
+        detail1: { h: "Typical measures", p: "Prevalence %, severity rating, distribution by amputation level/etiology." },
+        detail2: { h: "Key boundary", p: "You can describe subgroups, but you are not testing differences unless you compare statistically." }
+      },
+      {
+        title: "Associations",
+        what: "Is pain severity related to daily prosthesis wear time?",
+        detail1: { h: "Typical measures", p: "Correlation/regression between pain ratings and wear time; control for confounders if desired." },
+        detail2: { h: "Key boundary", p: "Association ≠ causation; still no manipulation." }
+      },
+      {
+        title: "Group differences (existing groups)",
+        what: "Do elevated vacuum vs pin suspension users differ in pain prevalence (or comfort)?",
+        detail1: { h: "Typical measures", p: "Between-group comparisons (t-test/χ²/ANOVA), matching/adjustment to reduce confounding." },
+        detail2: { h: "Key boundary", p: "Groups are pre-existing; no random assignment." }
+      },
+      {
+        title: "Intervention test",
+        what: "Does a new socket interface (or fitting protocol) reduce residual limb pain over 8 weeks?",
+        detail1: { h: "Typical measures", p: "Pre-post or RCT; pain, comfort, activity, skin breakdown, re-fit frequency." },
+        detail2: { h: "Key boundary", p: "Manipulation allows stronger causal inference (especially with randomization)." }
+      }
+    ],
+    // Set B (alternate examples)
+    [
+      {
+        title: "Registry / Description",
+        what: "Describe distribution of prosthetic knee types (MP vs mechanical) and patient characteristics in a clinic database.",
+        detail1: { h: "Typical measures", p: "Counts/%, age/activity level, K-level distribution, prescription trends." },
+        detail2: { h: "Key boundary", p: "Pure description of records; no inference about effect." }
+      },
+      {
+        title: "Associations",
+        what: "Is gait symmetry associated with socket fit score or perceived stability?",
+        detail1: { h: "Typical measures", p: "Symmetry indices vs fit/stability scores; regression controlling speed." },
+        detail2: { h: "Key boundary", p: "Relationship does not prove the socket caused the symmetry change." }
+      },
+      {
+        title: "Group differences (existing groups)",
+        what: "Do MP-knee users differ from mechanical-knee users in energy cost during walking?",
+        detail1: { h: "Typical measures", p: "VO₂, metabolic cost, walking speed; adjust for K-level and experience." },
+        detail2: { h: "Key boundary", p: "Selection bias is common; interpret causality carefully." }
+      },
+      {
+        title: "Intervention / Mode manipulation",
+        what: "Within-subject test: Does changing MP knee control mode alter gait mechanics and perceived stability?",
+        detail1: { h: "Typical measures", p: "AB/BA crossover; kinematics/kinetics, stability ratings, fall events." },
+        detail2: { h: "Key boundary", p: "Within-subject manipulation strengthens inference even without full RCT." }
+      }
+    ]
+  ];
+
+  const orthoticsSets = [
+    // Set A
+    [
+      {
+        title: "Prevalence / Description",
+        what: "What proportion of patients with drop foot wear an AFO daily (and for how many hours)?",
+        detail1: { h: "Typical measures", p: "Daily use %, hours/day, comfort ratings, reason for non-use." },
+        detail2: { h: "Key boundary", p: "Describes adherence; does not explain why without relationship tests." }
+      },
+      {
+        title: "Associations",
+        what: "Is comfort (or perceived stability) related to compliance (daily wear time)?",
+        detail1: { h: "Typical measures", p: "Correlations between comfort/stability and hours worn; consider diagnosis severity." },
+        detail2: { h: "Key boundary", p: "Still observational: comfort might correlate with other factors." }
+      },
+      {
+        title: "Group differences (existing groups)",
+        what: "Do solid AFO users differ from articulated AFO users in knee hyperextension incidence?",
+        detail1: { h: "Typical measures", p: "Between-group gait metrics, hyperextension angles, patient-reported outcomes." },
+        detail2: { h: "Key boundary", p: "Groups are not randomized; brace choice often reflects clinical presentation." }
+      },
+      {
+        title: "Intervention test",
+        what: "Does an alignment modification or stiffness tuning reduce knee hyperextension over 4–6 weeks?",
+        detail1: { h: "Typical measures", p: "Pre-post or crossover; kinematics, spatiotemporal gait, falls confidence." },
+        detail2: { h: "Key boundary", p: "Manipulating alignment/stiffness enables causal testing." }
+      }
+    ],
+    // Set B (alternate examples)
+    [
+      {
+        title: "Clinic / Description",
+        what: "Describe diagnoses and orthotic prescription patterns (AFO types, materials) across 2 years in a clinic.",
+        detail1: { h: "Typical measures", p: "Counts/%, device categories, fabrication methods, follow-up frequency." },
+        detail2: { h: "Key boundary", p: "Descriptive utilization data; no effectiveness conclusions." }
+      },
+      {
+        title: "Associations",
+        what: "Is AFO stiffness associated with walking speed or tibial progression angle?",
+        detail1: { h: "Typical measures", p: "Stiffness proxy vs speed/angles; may stratify by diagnosis." },
+        detail2: { h: "Key boundary", p: "Stiffness might be selected because of severity (confounding)." }
+      },
+      {
+        title: "Group differences (existing groups)",
+        what: "Do carbon fiber AFO users differ from thermoplastic AFO users in energy cost or patient satisfaction?",
+        detail1: { h: "Typical measures", p: "Metabolic cost, satisfaction scales, durability complaints, skin issues." },
+        detail2: { h: "Key boundary", p: "Device selection is rarely random in practice." }
+      },
+      {
+        title: "Protocol / Natural experiment",
+        what: "Quasi-experiment: Outcomes before vs after a clinic-wide casting + fitting protocol change.",
+        detail1: { h: "Typical measures", p: "Re-fit rates, satisfaction, gait metrics, time-to-delivery, adverse events." },
+        detail2: { h: "Key boundary", p: "Stronger than simple description, but less controlled than RCT." }
+      }
+    ]
+  ];
+
+  let currentSetIndex = 0; // 0 = Set A, 1 = Set B
+
+  function buildRungs(containerEl, rungDataSet){
+    containerEl.innerHTML = "";
+    stages.forEach((stage, i) => {
+      const item = rungDataSet[i];
+
+      const rung = document.createElement("div");
+      rung.className = "rung";
+      rung.dataset.stageKey = stage.key;
+
+      const top = document.createElement("div");
+      top.className = "rungTop";
+      top.setAttribute("role", "button");
+      top.setAttribute("tabindex", "0");
+      top.setAttribute("aria-expanded", "false");
+
+      const left = document.createElement("div");
+      left.className = "rungLeft";
+
+      const dot = document.createElement("div");
+      dot.className = "stepDot " + stage.dotClass;
+
+      const label = document.createElement("div");
+      label.className = "rungLabel";
+
+      const name = document.createElement("div");
+      name.className = "name";
+      name.textContent = stage.name + " — " + item.title;
+
+      const hint = document.createElement("div");
+      hint.className = "hint";
+      hint.textContent = stage.hint;
+
+      label.appendChild(name);
+      label.appendChild(hint);
+
+      left.appendChild(dot);
+      left.appendChild(label);
+
+      const chev = document.createElement("div");
+      chev.className = "chev";
+      chev.textContent = "OPEN";
+
+      top.appendChild(left);
+      top.appendChild(chev);
+
+      const body = document.createElement("div");
+      body.className = "rungBody";
+      body.innerHTML = `
+        <div class="keyline"><b>Question example:</b> ${escapeHtml(item.what)}</div>
+        <div class="cards">
+          <div class="card">
+            <h3>${escapeHtml(item.detail1.h)}</h3>
+            <p>${escapeHtml(item.detail1.p)}</p>
+          </div>
+          <div class="card">
+            <h3>${escapeHtml(item.detail2.h)}</h3>
+            <p>${escapeHtml(item.detail2.p)}</p>
+          </div>
+        </div>
+      `;
+
+      function toggle(){
+        const isOpen = body.classList.toggle("open");
+        top.setAttribute("aria-expanded", String(isOpen));
+        chev.textContent = isOpen ? "CLOSE" : "OPEN";
+      }
+
+      top.addEventListener("click", toggle);
+      top.addEventListener("keydown", (e) => {
+        if(e.key === "Enter" || e.key === " "){
+          e.preventDefault();
+          toggle();
+        }
+      });
+
+      rung.appendChild(top);
+      rung.appendChild(body);
+      containerEl.appendChild(rung);
+    });
+  }
+
+  function setAll(open){
+    document.querySelectorAll(".rung").forEach(rung => {
+      const top = rung.querySelector(".rungTop");
+      const body = rung.querySelector(".rungBody");
+      const chev = rung.querySelector(".chev");
+      if(open){
+        body.classList.add("open");
+        top.setAttribute("aria-expanded", "true");
+        chev.textContent = "CLOSE";
+      }else{
+        body.classList.remove("open");
+        top.setAttribute("aria-expanded", "false");
+        chev.textContent = "OPEN";
+      }
+    });
+  }
+
+  function swapExamples(){
+    currentSetIndex = (currentSetIndex + 1) % 2;
+    const p = document.getElementById("prostheticsRungs");
+    const o = document.getElementById("orthoticsRungs");
+    buildRungs(p, prostheticsSets[currentSetIndex]);
+    buildRungs(o, orthoticsSets[currentSetIndex]);
+  }
+
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  // Init
+  buildRungs(document.getElementById("prostheticsRungs"), prostheticsSets[currentSetIndex]);
+  buildRungs(document.getElementById("orthoticsRungs"), orthoticsSets[currentSetIndex]);
+
+  // Toolbar
+  document.getElementById("expandAllBtn").addEventListener("click", () => setAll(true));
+  document.getElementById("collapseAllBtn").addEventListener("click", () => setAll(false));
+  document.getElementById("swapBtn").addEventListener("click", swapExamples);
+
+  // Keyboard shortcuts
+  document.addEventListener("keydown", (e) => {
+    if(e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+    if(e.key === "E" || e.key === "e") setAll(true);
+    if(e.key === "C" || e.key === "c") setAll(false);
+    if(e.key === "S" || e.key === "s") swapExamples();
+  });
+</script>
+</body>
+</html>
