@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Methods Resources</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        /* Card Styles */
+        .resource-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-color: var(--accent-color);
+        }
+
+        .card-title {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.25em;
+            color: var(--primary-color);
+        }
+
+        .card-desc {
+            margin-bottom: 20px;
+            color: #555;
+            flex-grow: 1; /* Pushes the button to the bottom */
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--accent-color);
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 500;
+            text-align: center;
+            align-self: flex-start;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 15px; }
+            .btn { width: 100%; box-sizing: border-box; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Research Methods</h1>
+        <div class="subtitle">O&P Resource Portal</div>
+    </header>
+
+    <div id="resource-container" class="resource-list"></div>
+</div>
+
+<script>
+    // ==========================================
+    // DATA SECTION: UPDATE THIS LIST TO ADD PAGES
+    // ==========================================
+    const pages = [
+        {
+            title: "Quantitative vs Qualitative in O&P",
+            url: "https://frugalprof.github.io/ResearchMethods/QuantVsQual-examples.htm",
+            description: "Quantitative doesn’t just say <em>if</em> something changed — it quantifies <em>direction, magnitude,</em> and <em>uncertainty/precision.</em> Qualitative complements by explaining <em>meaning, experience,</em> and <em>context.</em>"
+        },
+        {
+            title: "O&P Study Design Categories",
+            url: "https://frugalprof.github.io/ResearchMethods/StudyDesignType.htm",
+            description: "A list of commonly-used study designs in O&P, with examples related to Orthotics & Prosthetics."
+        },
+        {
+            title: "Confidence Interval Overlap Tool (O&P)",
+            url: "https://frugalprof.github.io/ResearchMethods/CI-overlap-visualization-3.htm",
+            description: "Adjust the group mean, SD, and sample size (n). The plot shows each 95% CI, their overlap, and the difference in means with its own 95% CI (independent-groups normal approximation)."
+        }
+    ];
+
+    // ==========================================
+    // RENDER LOGIC (Do not need to edit below)
+    // ==========================================
+    const container = document.getElementById('resource-container');
+
+    pages.forEach(page => {
+        // Create card element
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        // Inner HTML
+        card.innerHTML = `
+            <h3 class="card-title">${page.title}</h3>
+            <div class="card-desc">${page.description}</div>
+            <a href="${page.url}" class="btn">Open Resource</a>
+        `;
+
+        // Append to container
+        container.appendChild(card);
+    });
+</script>
+
+</body>
+</html>
