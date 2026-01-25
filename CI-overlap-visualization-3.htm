@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!--
+    O&P CI Overlap / Difference Tool (Adjustable Values + n + SD + Optional Bell Curves)
+    -----------------------------------------------------------------------------------
+    Updates requested by Frank:
+      1) Add sample size (n) sliders for each group under the mean slider, and display SD.
+      2) Fix axis scales so they do NOT auto-adjust as values change (use preset-fixed scales).
+      3) Move "Interpretation cue" box to be under the Teaching Point box (right panel).
+      4) Add option to display bell-shaped curves above each horizontal CI bar.
+      5) Add bell-curve mode selector (SD vs SE) + an on-plot label showing which is active.
+      6) Add up/down arrow numeric steppers next to each displayed value so users can fine-tune via arrows or slider.
+
+    Key teaching point:
+      CI overlap is not a decision rule. The CI of the difference is the clean statement about group difference.
+
+    Developed by Professor Fedel using ChatGPT 5.2 - January 2026
+  -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CI Overlap Tool (O&P) — Mean, SD, n, CIs, Overlap</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --panel:#121a26;
+      --panel2:#0f1621;
+      --text:#e7eefc;
+      --muted:#a9b7d0;
+      --line:#2a3a55;
+      --accent:#7dd3fc;
+      --accent2:#34d399;
+      --warn:#fbbf24;
+      --bad:#fb7185;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      --radius:14px;
+      --shadow: 0 10px 24px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background:
+        radial-gradient(1200px 600px at 20% 10%, rgba(125,211,252,.16), transparent 60%),
+        radial-gradient(900px 500px at 80% 30%, rgba(52,211,153,.12), transparent 55%),
+        var(--bg);
+      color:var(--text);
+    }
+    header{
+      max-width:1200px;
+      margin:0 auto;
+      padding:18px 18px 10px;
+    }
+    h1{
+      margin:0 0 6px;
+      font-size: clamp(20px, 2.1vw, 30px);
+      letter-spacing:.2px;
+    }
+    .sub{
+      margin:0 0 12px;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.4;
+      max-width:980px;
+    }
+    main{
+      max-width:1200px;
+      margin:0 auto;
+      padding: 8px 18px 30px;
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap:14px;
+      align-items:start;
+    }
+    @media (max-width: 980px){
+      main{ grid-template-columns: 1fr; }
+    }
+
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid rgba(231,238,252,.12);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .panelHead{
+      padding: 12px 12px;
+      border-bottom:1px solid rgba(231,238,252,.08);
+      background: rgba(18,26,38,.70);
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:10px;
+    }
+    .panelHead h2{
+      margin:0;
+      font-size: 15px;
+      letter-spacing:.2px;
+    }
+    .panelHead p{
+      margin:4px 0 0;
+      color:var(--muted);
+      font-size:12.5px;
+      line-height:1.35;
+    }
+    .panelBody{ padding:12px 12px 14px; background: rgba(15,22,33,.55); }
+
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .card{
+      border:1px solid rgba(231,238,252,.10);
+      background: rgba(18,26,38,.40);
+      border-radius: 12px;
+      padding:10px;
+    }
+    .label{
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom:6px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:baseline;
+    }
+    .label b{ color: var(--text); }
+
+    /* numeric stepper shown where the value used to be displayed */
+    .numStep{
+      width: 84px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(231,238,252,.92);
+      background: rgba(15,22,33,.55);
+      border:1px solid rgba(231,238,252,.14);
+      border-radius: 10px;
+      padding: 4px 6px;
+      outline: none;
+    }
+    .numStep:focus{
+      border-color: rgba(125,211,252,.35);
+      box-shadow: 0 0 0 2px rgba(125,211,252,.12);
+    }
+
+    input[type="range"]{
+      width:100%;
+      accent-color: var(--accent);
+    }
+    .green input[type="range"]{ accent-color: var(--accent2); }
+    .tiny{
+      margin-top:8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height:1.35;
+    }
+    .controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      margin-bottom:10px;
+    }
+    select, button, label.chk{
+      font-family: var(--sans);
+      font-size: 13px;
+      color: var(--text);
+      background: rgba(18,26,38,.60);
+      border:1px solid rgba(231,238,252,.14);
+      border-radius: 12px;
+      padding: 9px 10px;
+      box-shadow: 0 6px 16px rgba(0,0,0,.25);
+    }
+    button{
+      cursor:pointer;
+      font-weight:800;
+      letter-spacing:.15px;
+    }
+    button:active{ transform: translateY(1px); }
+    label.chk{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      cursor:pointer;
+      user-select:none;
+    }
+    label.chk input{
+      width:16px; height:16px;
+      accent-color: var(--warn);
+    }
+
+    .outputs{
+      margin-top:10px;
+      border-top:1px solid rgba(231,238,252,.08);
+      padding-top:10px;
+      display:grid;
+      gap:10px;
+    }
+    .outBox{
+      border:1px solid rgba(231,238,252,.10);
+      background: rgba(15,22,33,.50);
+      border-radius: 12px;
+      padding:10px;
+    }
+    .outBox h3{
+      margin:0 0 6px;
+      font-size: 12.8px;
+      letter-spacing:.2px;
+      color: rgba(231,238,252,.95);
+    }
+    .outBox pre{
+      margin:0;
+      white-space:pre-wrap;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height:1.35;
+      color: rgba(231,238,252,.90);
+    }
+
+    .vizWrap{
+      padding: 10px 10px 14px;
+      background: rgba(15,22,33,.55);
+    }
+    canvas{
+      width:100%;
+      height: 420px;
+      display:block;
+      border-radius: 12px;
+      border:1px solid rgba(231,238,252,.10);
+      background: rgba(18,26,38,.40);
+    }
+    .note{
+      margin-top:10px;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height:1.45;
+      border:1px dashed rgba(231,238,252,.14);
+      background: rgba(18,26,38,.25);
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .note b{ color: var(--text); }
+    .kbd{
+      font-family: var(--mono);
+      border:1px solid rgba(231,238,252,.14);
+      border-bottom-color: rgba(231,238,252,.22);
+      padding: 2px 6px;
+      border-radius: 8px;
+      background: rgba(15,22,33,.55);
+      color: rgba(231,238,252,.92);
+    }
+/* Visible attribution */
+.attribution{
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: right;
+  opacity: 0.95;
+}
+.attribution b{ color: var(--text); }
+
+  </style>
+</head>
+
+<body>
+<header>
+  <h1>Confidence Interval Overlap Tool (O&amp;P)</h1>
+  <p class="sub">
+    Adjust the group <b>mean</b>, <b>SD</b>, and <b>sample size (n)</b>. The plot shows each 95% CI, their <b>overlap</b>, and the
+    <b>difference in means</b> with its own 95% CI (independent-groups normal approximation).
+  </p>
+</header>
+
+<main>
+  <!-- Controls -->
+  <section class="panel">
+    <div class="panelHead">
+      <div>
+        <h2>Inputs</h2>
+        <p>Choose an O&amp;P preset, then tweak mean, SD, and n. Axis scales stay fixed per preset.</p>
+      </div>
+      <div style="font-family:var(--mono); font-size:12px; color:rgba(231,238,252,.85);">
+        Keys: <span class="kbd">R</span> reset • <span class="kbd">P</span> preset
+      </div>
+    </div>
+
+    <div class="panelBody">
+      <div class="controls">
+        <select id="preset">
+          <option value="afo_hyperext">Orthotics: Solid vs Articulated AFO → knee hyperextension (°)</option>
+          <option value="socket_pain">Prosthetics: Socket interface → residual limb pain (0–10)</option>
+          <option value="vacuum_pin">Prosthetics: Vacuum vs Pin → comfort (0–10)</option>
+          <option value="mpk_mode">Prosthetics: MP knee mode A vs B → stability rating (0–10)</option>
+          <option value="afo_wear">Orthotics: Custom vs OTS AFO → wear time (hrs/day)</option>
+        </select>
+        <button id="applyPreset">Apply Preset</button>
+        <button id="reset">Reset</button>
+
+        <label class="chk" title="Show bell-shaped curves above each CI bar">
+          <input id="showBell" type="checkbox" />
+          Show bell curves
+        </label>
+
+        <select id="bellMode" title="Bell curve width uses SD (individual spread) or SE (uncertainty of the mean)">
+          <option value="se" selected>Bell width: SE (mean)</option>
+          <option value="sd">Bell width: SD (individual)</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <div class="card">
+          <div class="label">
+            <b id="labelA">Group A</b>
+            <input id="meanA_num" class="numStep" type="number" step="0.1" />
+          </div>
+          <input id="meanA" type="range" min="-10" max="20" step="0.1" value="8.0">
+          <div class="tiny">Mean (μ<sub>A</sub>)</div>
+
+          <div class="label" style="margin-top:10px;">
+            <span>Sample size (n)</span>
+            <input id="nA_num" class="numStep" type="number" step="1" />
+          </div>
+          <input id="nA" type="range" min="5" max="200" step="1" value="30">
+          <div class="tiny">n affects CI width through SE = SD / √n</div>
+
+          <div class="label" style="margin-top:10px;">
+            <span>SD</span>
+            <input id="sdA_num" class="numStep" type="number" step="0.1" />
+          </div>
+          <input id="sdA" type="range" min="0.1" max="10" step="0.1" value="4.0">
+          <div class="tiny">95% CI half-width ≈ 1.96 × (SD / √n)</div>
+        </div>
+
+        <div class="card green">
+          <div class="label">
+            <b id="labelB">Group B</b>
+            <input id="meanB_num" class="numStep" type="number" step="0.1" />
+          </div>
+          <input id="meanB" type="range" min="-10" max="20" step="0.1" value="5.5">
+          <div class="tiny">Mean (μ<sub>B</sub>)</div>
+
+          <div class="label" style="margin-top:10px;">
+            <span>Sample size (n)</span>
+            <input id="nB_num" class="numStep" type="number" step="1" />
+          </div>
+          <input id="nB" type="range" min="5" max="200" step="1" value="30">
+          <div class="tiny">n affects CI width through SE = SD / √n</div>
+
+          <div class="label" style="margin-top:10px;">
+            <span>SD</span>
+            <input id="sdB_num" class="numStep" type="number" step="0.1" />
+          </div>
+          <input id="sdB" type="range" min="0.1" max="10" step="0.1" value="4.0">
+          <div class="tiny">95% CI half-width ≈ 1.96 × (SD / √n)</div>
+        </div>
+      </div>
+
+      <div class="outputs">
+        <div class="outBox">
+          <h3>Computed (independent groups; normal approx)</h3>
+          <pre id="computed"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Viz -->
+  <section class="panel">
+    <div class="panelHead">
+      <div>
+        <h2>Visualization</h2>
+        <p>Two group means + 95% CIs; overlap shaded; difference CI shown below.</p>
+      </div>
+    </div>
+    <div class="vizWrap">
+      <canvas id="cv" width="1200" height="420"></canvas>
+
+      <div class="note" id="teachingPoint">
+        <b>Teaching point:</b> CI overlap is about uncertainty in each estimate. The “difference CI” is the direct
+        statement about the group difference. It’s possible to have <b>overlap</b> and still have a meaningful directional point estimate —
+        especially with small n or high SD.
+      </div>
+
+      <div class="outBox" id="cueBox" style="margin-top:10px;">
+        <h3>Interpretation cue (what to say)</h3>
+        <pre id="cue"></pre>
+      </div>
+<div class="attribution">Designed by <b>Professor Fedel</b> using <b>ChatGPT 5.2</b> • January 2026</div>
+
+
+    </div>
+  </section>
+</main>
+<script>
+  // ---------- Constants ----------
+  const Z = 1.96;
+
+  // Error function approximation for normal CDF
+  function erf(x){
+    const sign = x >= 0 ? 1 : -1;
+    x = Math.abs(x);
+    const a1=0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429;
+    const p=0.3275911;
+    const t = 1/(1+p*x);
+    const y = 1 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*Math.exp(-x*x);
+    return sign*y;
+  }
+  function normCdf(x){
+    return 0.5 * (1 + erf(x/Math.SQRT2));
+  }
+  function fmt(x, d=2){
+    return (Math.round(x*Math.pow(10,d))/Math.pow(10,d)).toFixed(d);
+  }
+  function clamp(v, lo, hi){
+    return Math.min(hi, Math.max(lo, v));
+  }
+
+  // ---------- Presets with FIXED axis scales ----------
+  const presets = {
+    afo_hyperext: {
+      metric: "Knee hyperextension (°)",
+      xMin: -5, xMax: 20,
+      dMin: -15, dMax: 15,
+      a: { name:"Solid AFO", mean: 8.0, sd: 7.0, n: 30 },
+      b: { name:"Articulated AFO", mean: 5.5, sd: 7.0, n: 30 }
+    },
+    socket_pain: {
+      metric: "Residual limb pain (0–10)",
+      xMin: 0, xMax: 10,
+      dMin: -6, dMax: 6,
+      a: { name:"Standard interface", mean: 5.8, sd: 2.4, n: 25 },
+      b: { name:"New interface", mean: 4.6, sd: 2.6, n: 25 }
+    },
+    vacuum_pin: {
+      metric: "Comfort score (0–10)",
+      xMin: 0, xMax: 10,
+      dMin: -6, dMax: 6,
+      a: { name:"Pin suspension", mean: 6.2, sd: 2.8, n: 30 },
+      b: { name:"Elevated vacuum", mean: 7.1, sd: 3.1, n: 30 }
+    },
+    mpk_mode: {
+      metric: "Perceived stability (0–10)",
+      xMin: 0, xMax: 10,
+      dMin: -6, dMax: 6,
+      a: { name:"MP knee mode A", mean: 6.0, sd: 3.6, n: 20 },
+      b: { name:"MP knee mode B", mean: 6.7, sd: 3.6, n: 20 }
+    },
+    afo_wear: {
+      metric: "Wear time (hrs/day)",
+      xMin: 0, xMax: 16,
+      dMin: -10, dMax: 10,
+      a: { name:"Off-the-shelf AFO", mean: 5.2, sd: 3.2, n: 35 },
+      b: { name:"Custom AFO", mean: 6.1, sd: 3.4, n: 35 }
+    }
+  };
+
+  // ---------- Elements ----------
+  const presetSel = document.getElementById("preset");
+  const applyPresetBtn = document.getElementById("applyPreset");
+  const resetBtn = document.getElementById("reset");
+  const showBell = document.getElementById("showBell");
+  const bellMode = document.getElementById("bellMode");
+
+  const meanA = document.getElementById("meanA");
+  const meanB = document.getElementById("meanB");
+  const nA = document.getElementById("nA");
+  const nB = document.getElementById("nB");
+  const sdA = document.getElementById("sdA");
+  const sdB = document.getElementById("sdB");
+
+  const meanA_num = document.getElementById("meanA_num");
+  const meanB_num = document.getElementById("meanB_num");
+  const nA_num = document.getElementById("nA_num");
+  const nB_num = document.getElementById("nB_num");
+  const sdA_num = document.getElementById("sdA_num");
+  const sdB_num = document.getElementById("sdB_num");
+
+  const labelA = document.getElementById("labelA");
+  const labelB = document.getElementById("labelB");
+
+  const computedEl = document.getElementById("computed");
+  const cueEl = document.getElementById("cue");
+
+  const cv = document.getElementById("cv");
+  const ctx = cv.getContext("2d");
+
+  let current = presets[presetSel.value];
+
+  // Keep number inputs min/max/step aligned with sliders
+  function syncNumToRange(rangeEl, numEl){
+    numEl.min = rangeEl.min;
+    numEl.max = rangeEl.max;
+    numEl.step = rangeEl.step;
+  }
+
+  function setSliderRanges(metric){
+    if(metric.includes("0–10")){
+      meanA.min = meanB.min = "0";
+      meanA.max = meanB.max = "10";
+      meanA.step = meanB.step = "0.1";
+      sdA.min = sdB.min = "0.1";
+      sdA.max = sdB.max = "5";
+      sdA.step = sdB.step = "0.1";
+    }else if(metric.includes("hrs/day")){
+      meanA.min = meanB.min = "0";
+      meanA.max = meanB.max = "16";
+      meanA.step = meanB.step = "0.1";
+      sdA.min = sdB.min = "0.1";
+      sdA.max = sdB.max = "8";
+      sdA.step = sdB.step = "0.1";
+    }else if(metric.includes("(°)")){
+      meanA.min = meanB.min = "-5";
+      meanA.max = meanB.max = "20";
+      meanA.step = meanB.step = "0.1";
+      sdA.min = sdB.min = "0.1";
+      sdA.max = sdB.max = "12";
+      sdA.step = sdB.step = "0.1";
+    }else{
+      meanA.min = meanB.min = "-10";
+      meanA.max = meanB.max = "20";
+      meanA.step = meanB.step = "0.1";
+      sdA.min = sdB.min = "0.1";
+      sdA.max = sdB.max = "10";
+      sdA.step = sdB.step = "0.1";
+    }
+
+    nA.min = nB.min = "5";
+    nA.max = nB.max = "200";
+    nA.step = nB.step = "1";
+
+    // align numeric steppers
+    syncNumToRange(meanA, meanA_num);
+    syncNumToRange(meanB, meanB_num);
+    syncNumToRange(nA, nA_num);
+    syncNumToRange(nB, nB_num);
+    syncNumToRange(sdA, sdA_num);
+    syncNumToRange(sdB, sdB_num);
+  }
+
+  function applyPreset(){
+    current = presets[presetSel.value];
+    setSliderRanges(current.metric);
+
+    labelA.textContent = `Group A: ${current.a.name}`;
+    labelB.textContent = `Group B: ${current.b.name}`;
+
+    meanA.value = current.a.mean;
+    meanB.value = current.b.mean;
+
+    nA.value = current.a.n;
+    nB.value = current.b.n;
+
+    sdA.value = current.a.sd;
+    sdB.value = current.b.sd;
+
+    // sync numeric steppers
+    meanA_num.value = meanA.value;
+    meanB_num.value = meanB.value;
+    nA_num.value = nA.value;
+    nB_num.value = nB.value;
+    sdA_num.value = sdA.value;
+    sdB_num.value = sdB.value;
+
+    update();
+  }
+
+  function compute(){
+    const mA = parseFloat(meanA.value);
+    const mB = parseFloat(meanB.value);
+    const sA = parseFloat(sdA.value);
+    const sB = parseFloat(sdB.value);
+    const NA = parseInt(nA.value, 10);
+    const NB = parseInt(nB.value, 10);
+
+    const seA = sA / Math.sqrt(Math.max(1, NA));
+    const seB = sB / Math.sqrt(Math.max(1, NB));
+
+    const hA = Z * seA;
+    const hB = Z * seB;
+
+    const A_lo = mA - hA, A_hi = mA + hA;
+    const B_lo = mB - hB, B_hi = mB + hB;
+
+    const ov_lo = Math.max(A_lo, B_lo);
+    const ov_hi = Math.min(A_hi, B_hi);
+    const overlap = Math.max(0, ov_hi - ov_lo);
+
+    const diff = mA - mB;
+    const seDiff = Math.sqrt(seA*seA + seB*seB);
+    const diff_hw = Z * seDiff;
+    const D_lo = diff - diff_hw;
+    const D_hi = diff + diff_hw;
+
+    const z = (seDiff > 0) ? diff / seDiff : 0;
+    const p = 2 * (1 - normCdf(Math.abs(z)));
+
+    return {
+      metric: current.metric,
+      xMin: current.xMin, xMax: current.xMax,
+      dMin: current.dMin, dMax: current.dMax,
+      mA,mB,sA,sB,NA,NB,
+      seA,seB,hA,hB,
+      A_lo,A_hi,B_lo,B_hi,
+      overlap, ov_lo, ov_hi,
+      diff, seDiff, diff_hw, D_lo, D_hi, z, p
+    };
+  }
+
+  function drawBellCurve(xFn, yBase, mean, sdForCurve, color, widthPx, heightPx){
+    const steps = Math.max(60, Math.floor(widthPx / 8));
+    const xStart = mean - 3*sdForCurve;
+    const xEnd   = mean + 3*sdForCurve;
+
+    const peak = (sdForCurve > 0) ? (1 / (sdForCurve * Math.sqrt(2*Math.PI))) : 1;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    for(let i=0;i<=steps;i++){
+      const t = i/steps;
+      const xVal = xStart + t*(xEnd - xStart);
+      const dx = (xVal - mean);
+      const pdf = (sdForCurve > 0) ? (Math.exp(-0.5*(dx*dx)/(sdForCurve*sdForCurve)) / (sdForCurve*Math.sqrt(2*Math.PI))) : 0;
+      const scaled = (peak > 0) ? (pdf / peak) : 0;
+      const y = yBase - scaled * heightPx;
+      const xp = xFn(xVal);
+      if(i===0) ctx.moveTo(xp, y);
+      else ctx.lineTo(xp, y);
+    }
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = color;
+    ctx.lineTo(xFn(xEnd), yBase);
+    ctx.lineTo(xFn(xStart), yBase);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  function draw(res){
+    const cssW = cv.clientWidth;
+    const cssH = cv.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.floor(cssW * dpr);
+    cv.height = Math.floor(cssH * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+
+    const W = cssW, H = cssH;
+    const plotTop = 18, plotBottom = H - 110;
+    const plotLeft = 60, plotRight = W - 20;
+
+    const x0 = res.xMin;
+    const x1 = res.xMax;
+
+    function x(v){
+      return plotLeft + ((v - x0) / (x1 - x0)) * (plotRight - plotLeft);
+    }
+
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = "rgba(18,26,38,0.35)";
+    ctx.fillRect(0,0,W,H);
+
+    ctx.strokeStyle = "rgba(231,238,252,0.10)";
+    ctx.lineWidth = 1;
+
+    const ticks = 6;
+    for(let i=0;i<=ticks;i++){
+      const v = x0 + (i/ticks)*(x1-x0);
+      const xx = x(v);
+      ctx.beginPath();
+      ctx.moveTo(xx, plotTop);
+      ctx.lineTo(xx, plotBottom);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(169,183,208,0.85)";
+      ctx.font = "12px " + getComputedStyle(document.body).fontFamily;
+      ctx.textAlign = "center";
+      ctx.fillText(fmt(v,1), xx, plotBottom + 18);
+    }
+
+    ctx.fillStyle = "rgba(231,238,252,0.95)";
+    ctx.font = "14px " + getComputedStyle(document.body).fontFamily;
+    ctx.textAlign = "left";
+    ctx.fillText(res.metric, 18, 18);
+
+    if(showBell.checked){
+      const modeText = (bellMode.value === "se")
+        ? "Bell curve width: SE (sampling distribution of mean)"
+        : "Bell curve width: SD (individual variability)";
+      ctx.fillStyle = "rgba(231,238,252,0.85)";
+      ctx.font = "12px " + getComputedStyle(document.body).fontFamily;
+      ctx.textAlign = "right";
+      ctx.fillText(modeText, plotRight, plotTop + 16);
+    }
+
+    const yA = plotTop + 75;
+    const yB = plotTop + 160;
+
+    function drawGroup(y, lo, hi, mean, sd, n, se, color, label){
+      if(showBell.checked){
+        const bellBase = y - 18;
+        const bellHeight = 32;
+
+        const sdForCurve = (bellMode.value === "se") ? se : sd;
+        const safe = Math.max(sdForCurve, 1e-6);
+
+        drawBellCurve(x, bellBase, mean, safe, color, (plotRight-plotLeft), bellHeight);
+      }
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x(lo), y);
+      ctx.lineTo(x(hi), y);
+      ctx.stroke();
+
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x(lo), y-10); ctx.lineTo(x(lo), y+10);
+      ctx.moveTo(x(hi), y-10); ctx.lineTo(x(hi), y+10);
+      ctx.stroke();
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x(mean), y, 6, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(231,238,252,0.92)";
+      ctx.font = "12.5px " + getComputedStyle(document.body).fontFamily;
+      ctx.textAlign = "left";
+      ctx.fillText(label, plotLeft, y - 16);
+
+      ctx.fillStyle = "rgba(169,183,208,0.95)";
+      ctx.font = "12px " + getComputedStyle(document.body).fontFamily;
+      ctx.fillText(`Mean ${fmt(mean,2)}   SD ${fmt(sd,2)}   n ${n}   CI [${fmt(lo,2)}, ${fmt(hi,2)}]`, plotLeft, y + 24);
+    }
+
+    if(res.overlap > 0){
+      const ox0 = x(res.ov_lo);
+      const ox1 = x(res.ov_hi);
+      ctx.fillStyle = "rgba(251,191,36,0.16)";
+      ctx.fillRect(ox0, yA-14, (ox1-ox0), (yB - yA) + 28);
+
+      ctx.strokeStyle = "rgba(251,191,36,0.55)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(ox0, yA-14, (ox1-ox0), (yB - yA) + 28);
+
+      ctx.fillStyle = "rgba(251,191,36,0.95)";
+      ctx.font = "12px " + getComputedStyle(document.body).fontFamily;
+      ctx.textAlign = "center";
+      ctx.fillText(`Overlap ≈ ${fmt(res.overlap,2)}`, (ox0+ox1)/2, yA + (yB-yA)/2 + 5);
+    } else {
+      ctx.fillStyle = "rgba(251,191,36,0.9)";
+      ctx.font = "12px " + getComputedStyle(document.body).fontFamily;
+      ctx.textAlign = "left";
+      ctx.fillText("No CI overlap", plotLeft, yB + 48);
+    }
+
+    drawGroup(yA, res.A_lo, res.A_hi, res.mA, res.sA, res.NA, res.seA, "rgba(125,211,252,0.95)", `Group A: ${current.a.name}`);
+    drawGroup(yB, res.B_lo, res.B_hi, res.mB, res.sB, res.NB, res.seB, "rgba(52,211,153,0.95)", `Group B: ${current.b.name}`);
+
+    const dY = plotBottom + 60;
+
+    const dx0 = res.dMin;
+    const dx1 = res.dMax;
+
+    function xd(v){
+      return plotLeft + ((v - dx0) / (dx1 - dx0)) * (plotRight - plotLeft);
+    }
+
+    ctx.strokeStyle = "rgba(231,238,252,0.18)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(plotLeft, dY);
+    ctx.lineTo(plotRight, dY);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(251,113,133,0.50)";
+    ctx.setLineDash([5,5]);
+    ctx.beginPath();
+    ctx.moveTo(xd(0), dY-14);
+    ctx.lineTo(xd(0), dY+14);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = "rgba(169,183,208,0.95)";
+    ctx.font = "12px " + getComputedStyle(document.body).fontFamily;
+    ctx.textAlign = "left";
+    ctx.fillText("Difference (A − B) with 95% CI", plotLeft, dY - 24);
+
+    ctx.strokeStyle = "rgba(231,238,252,0.92)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(xd(res.D_lo), dY);
+    ctx.lineTo(xd(res.D_hi), dY);
+    ctx.stroke();
+
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(xd(res.D_lo), dY-10); ctx.lineTo(xd(res.D_lo), dY+10);
+    ctx.moveTo(xd(res.D_hi), dY-10); ctx.lineTo(xd(res.D_hi), dY+10);
+    ctx.stroke();
+
+    const diffColor = (res.diff < 0) ? "rgba(52,211,153,0.95)" : "rgba(125,211,252,0.95)";
+    ctx.fillStyle = diffColor;
+    ctx.beginPath();
+    ctx.arc(xd(res.diff), dY, 6, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(231,238,252,0.95)";
+    ctx.font = "12px " + getComputedStyle(document.body).fontFamily;
+    ctx.textAlign = "left";
+    ctx.fillText(`Diff = ${fmt(res.diff,2)}   CI [${fmt(res.D_lo,2)}, ${fmt(res.D_hi,2)}]`, plotLeft, dY + 28);
+
+    ctx.fillStyle = "rgba(169,183,208,0.95)";
+    ctx.font = "12px " + getComputedStyle(document.body).fontFamily;
+    ctx.fillText(`Approx z = ${fmt(res.z,2)}   p ≈ ${fmt(res.p,3)}`, plotLeft, dY + 48);
+  }
+
+  function update(){
+    const res = compute();
+
+    // keep numeric steppers synced to current slider values (no formatting tricks)
+    meanA_num.value = meanA.value;
+    meanB_num.value = meanB.value;
+    nA_num.value = nA.value;
+    nB_num.value = nB.value;
+    sdA_num.value = sdA.value;
+    sdB_num.value = sdB.value;
+
+    const overlapLine = (res.overlap > 0)
+      ? `CI overlap: ${fmt(res.overlap,2)} (from ${fmt(res.ov_lo,2)} to ${fmt(res.ov_hi,2)})`
+      : `CI overlap: none`;
+
+    computedEl.textContent =
+`Metric: ${res.metric}
+
+Group A: mean ${fmt(res.mA,2)}  SD ${fmt(res.sA,2)}  n ${res.NA}
+  SE = ${fmt(res.seA,3)}  95% CI half-width = ${fmt(res.hA,2)}
+  95% CI: [${fmt(res.A_lo,2)}, ${fmt(res.A_hi,2)}]
+
+Group B: mean ${fmt(res.mB,2)}  SD ${fmt(res.sB,2)}  n ${res.NB}
+  SE = ${fmt(res.seB,3)}  95% CI half-width = ${fmt(res.hB,2)}
+  95% CI: [${fmt(res.B_lo,2)}, ${fmt(res.B_hi,2)}]
+
+${overlapLine}
+
+Difference (A − B): ${fmt(res.diff,2)}
+  SE(diff) = ${fmt(res.seDiff,3)}  95% CI: [${fmt(res.D_lo,2)}, ${fmt(res.D_hi,2)}]
+Approx z: ${fmt(res.z,2)}   Approx p (two-sided): ${fmt(res.p,3)}
+
+Reminder:
+- Overlap is about uncertainty of each mean.
+- The difference CI directly addresses the group difference.`;
+
+    const dir = (res.diff > 0) ? "A is higher than B" : (res.diff < 0) ? "A is lower than B" : "Means are equal";
+    const diffIncludesZero = (res.D_lo <= 0 && res.D_hi >= 0);
+    const cue1 = `Point estimate: ${dir} by about ${fmt(Math.abs(res.diff),2)}.`;
+    const cue2 = diffIncludesZero
+      ? "Difference CI crosses 0 → estimate is imprecise (can’t rule out no difference with this approximation)."
+      : "Difference CI does NOT cross 0 → consistent with a non-zero difference (with this approximation).";
+    const cue3 = (res.overlap > 0)
+      ? "Even with CI overlap, interpret direction + magnitude; overlap alone is not the decision rule."
+      : "No overlap often suggests clearer separation, but the difference CI remains the clean statement.";
+
+    cueEl.textContent =
+`${cue1}
+${cue2}
+${cue3}
+
+Suggested student sentence:
+“Group means differed by ${fmt(res.diff,2)} (${fmt(res.D_lo,2)} to ${fmt(res.D_hi,2)}), indicating ${diffIncludesZero ? "uncertainty about the true difference" : "evidence of a directional difference"}.”`;
+
+    draw(res);
+  }
+
+  // Bind slider <-> numeric stepper (arrows) for precise adjustments
+  function bindPair(rangeEl, numEl, isInt=false){
+    // slider drives number
+    rangeEl.addEventListener("input", () => {
+      numEl.value = rangeEl.value;
+      update();
+    });
+
+    // number drives slider (includes arrow increments)
+    const pushNumToRange = () => {
+      let v = isInt ? parseInt(numEl.value, 10) : parseFloat(numEl.value);
+      if(!Number.isFinite(v)) return;
+
+      const lo = parseFloat(rangeEl.min);
+      const hi = parseFloat(rangeEl.max);
+      v = clamp(v, lo, hi);
+
+      // normalize to step (important for clean alignment)
+      const step = parseFloat(rangeEl.step || "1");
+      if(Number.isFinite(step) && step > 0){
+        v = Math.round((v - lo) / step) * step + lo;
+        v = clamp(v, lo, hi);
+      }
+
+      rangeEl.value = String(v);
+      numEl.value = String(v);
+      update();
+    };
+
+    numEl.addEventListener("input", pushNumToRange);
+    numEl.addEventListener("change", pushNumToRange);
+  }
+
+  // Events (minimal changes)
+  applyPresetBtn.addEventListener("click", applyPreset);
+  resetBtn.addEventListener("click", () => applyPreset());
+  showBell.addEventListener("change", update);
+  bellMode.addEventListener("change", update);
+  window.addEventListener("resize", update);
+
+  document.addEventListener("keydown", (e) => {
+    if(e.key === "r" || e.key === "R") applyPreset();
+    if(e.key === "p" || e.key === "P") applyPreset();
+  });
+
+  // init + bind after first preset sets ranges
+  applyPreset();
+  bindPair(meanA, meanA_num, false);
+  bindPair(meanB, meanB_num, false);
+  bindPair(nA, nA_num, true);
+  bindPair(nB, nB_num, true);
+  bindPair(sdA, sdA_num, false);
+  bindPair(sdB, sdB_num, false);
+</script>
+</body>
+</html>
