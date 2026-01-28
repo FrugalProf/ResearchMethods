@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ProportionConfidenceIntervalCalculator7 — Automatic Statistical Dashboard</title>
+
+<!--
+===============================================================================
+ProportionConfidenceIntervalCalculator7.htm
+Part of Professor Frank J. Fedel’s ongoing series of interactive HTML pages.
+This specific version originated with Gemini 2.5 Pro.
+
+WHAT THIS IS
+-------------
+An interactive dashboard to explore categorical proportions across multiple groups.
+It computes 95% confidence intervals (normal approx), runs an omnibus chi-square
+(goodness-of-fit) test for equal proportions, and—if significant—shows Bonferroni-
+corrected pairwise z-tests.
+
+HOW TO USE
+-----------
+1) Choose Input Type: Counts (raw tallies) or Proportions (%).
+2) Set Total Sample Size (n). (In Counts mode, n auto-updates to sum of counts.)
+3) Add variables (A, B, C, …), name them, and enter values.
+4) Watch CIs, chi-square, and (when significant) post-hoc results update live.
+
+WHAT YOU CAN LEARN
+-------------------
+• How n affects CI width (larger n → narrower CI).
+• How unequal group proportions drive chi-square.
+• Why we use an omnibus test before pairwise tests.
+• Multiple-comparisons control via Bonferroni.
+
+NOTES / LIMITS
+---------------
+• CI method uses normal (Wald) approximation; for small n/extreme p, Wilson /
+  Agresti–Coull are often preferable (not implemented here).
+• Post-hoc uses pooled two-proportion z-tests + Bonferroni.
+===============================================================================
+-->
+
+<style>
+  :root{
+    --bg-color:#1e1e1e;
+    --panel-color:#2a2a2a;
+    --text-color:#e0e0e0;
+    --muted-color:#999;
+    --border-color:#444;
+    --primary-color-hsl:207,90%,54%;
+    --danger-color:#d9534f;
+    --danger-hover:#c9302c;
+    --success-color-rgb:92,184,92;
+    --success-hover:#4cae4c;
+  }
+
+  /* Keep entire page on one screen; individual panels may scroll internally */
+  html, body { height: 100%; }
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg-color);
+    color:var(--text-color);
+    font-size:16px;
+    line-height:1.6;
+    overflow:hidden; /* no page scroll */
+    padding:12px;
+  }
+
+  /* ==== 4-up dashboard, single row on desktop ==== */
+  .dashboard-container{
+    display:grid;
+    grid-template-columns: 1fr 1.15fr 1.15fr 0.82fr; /* Input | CI | Post-hoc | About */
+    gap:14px;
+    max-width: 2200px;
+    height: calc(100vh - 24px); /* fill viewport minus body padding */
+    margin:0 auto;
+    align-items:stretch;
+  }
+
+  .panel{
+    background:var(--panel-color);
+    border:1px solid var(--border-color);
+    border-radius:8px;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    min-height:100%;
+    max-height:100%;
+    overflow:auto; /* internal scroll if needed */
+  }
+
+  /* Compact headings to conserve vertical space */
+  h1{font-size:1.06rem; margin:0 0 10px; border-bottom:2px solid hsla(var(--primary-color-hsl),1); padding-bottom:8px;}
+  h3{font-size:0.98rem; margin:10px 0 8px;}
+
+  .input-group{
+    margin-bottom:12px;
+    display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+  }
+  .input-group label{font-weight:bold; color:var(--muted-color);}
+
+  input[type="text"], input[type="number"], select{
+    background:var(--bg-color);
+    color:var(--text-color);
+    border:1px solid var(--border-color);
+    border-radius:4px;
+    padding:8px 10px; font-size:1em;
+  }
+  input[type="number"]{ width:100px; }
+
+  .variable-input{
+    display:grid; grid-template-columns:1fr 1fr 40px;
+    gap:10px; align-items:center; margin-bottom:8px;
+  }
+
+  .controls{
+    display:flex; justify-content:space-between; align-items:center;
+    padding-top:12px; border-top:1px solid var(--border-color);
+    margin-top:auto; /* pins controls at bottom of panel */
+  }
+
+  button{
+    padding:8px 14px; font-size:0.9em; font-weight:bold; color:#fff;
+    border:none; border-radius:6px; cursor:pointer; transition:background-color .2s;
+  }
+  button:disabled{ background:#555; cursor:not-allowed; }
+  .add-btn{ background:rgba(var(--success-color-rgb),1); }
+  .add-btn:hover:not(:disabled){ background:var(--success-hover); }
+  .remove-btn{
+    background:var(--danger-color); border-radius:50%; width:30px; height:30px;
+    font-weight:bold; line-height:30px; text-align:center; padding:0;
+  }
+  .remove-btn:hover{ background:var(--danger-hover); }
+
+  .results-table, .posthoc-table{ width:100%; border-collapse:collapse; margin-top:8px; }
+  .results-table th, .results-table td, .posthoc-table th, .posthoc-table td{
+    border:1px solid var(--border-color); padding:10px 8px; text-align:center;
+  }
+  .results-table th, .posthoc-table th{ background:#333; }
+  .posthoc-table th:first-child, .posthoc-table td:first-child{ font-weight:bold; background:#333; }
+  .posthoc-table td{ transition:background-color .3s; }
+
+  #warning-container{
+    margin-bottom:10px; padding:10px;
+    background:rgba(255,180,0,0.1); border:1px solid rgba(255,180,0,0.5);
+    color:#ffb400; border-radius:5px; text-align:center;
+  }
+
+  .graph-cell{ width:140px; }
+  .ci-graph{ position:relative; height:22px; background:#444; border-radius:4px; overflow:hidden; }
+  .ci-bar{ position:absolute; height:100%; transition:background-color .3s; }
+  .ci-marker{ position:absolute; height:100%; width:3px; background:#fff; box-shadow:0 0 5px rgba(0,0,0,.5); }
+
+  .test-results-box{
+    margin-top:12px; padding:12px; background:var(--bg-color);
+    border:1px solid var(--border-color); border-radius:8px;
+  }
+  .test-results-box h3{ margin-top:0; }
+  .significant{ color:rgba(var(--success-color-rgb),1); font-weight:bold; }
+  .not-significant{ color:var(--danger-color); font-weight:bold; }
+  .placeholder{ color:var(--muted-color); text-align:center; margin-top:8px; font-style:italic; }
+
+  /* Keep four columns as long as possible; only collapse when necessary */
+  @media (max-width: 1280px){
+    .dashboard-container{ grid-template-columns: 1fr 1fr; height:auto; }
+    body{ overflow:auto; } /* allow page scroll below 1280px */
+  }
+  @media (max-width: 760px){
+    .dashboard-container{ grid-template-columns: 1fr; }
+  }
+
+  /* Small "?" button in About panel */
+  #aboutBtn{
+    width:28px; height:28px; border-radius:50%;
+    font-weight:700; line-height:28px; text-align:center;
+    background:#3a3a3a;
+  }
+
+  /* Native dialog minimal theming */
+  dialog{
+    background:var(--panel-color); color:var(--text-color);
+    border:1px solid var(--border-color); border-radius:10px;
+    padding:16px; max-width:520px; width:min(92vw,520px); max-height:80vh;
+  }
+  dialog::backdrop{ background:rgba(0,0,0,.5); }
+</style>
+</head>
+<body>
+
+<div class="dashboard-container">
+
+  <!-- Panel 1: Data Input -->
+  <div class="panel" id="panel-input">
+    <h1>📊 Data Input</h1>
+
+    <div class="input-group">
+      <div>
+        <label for="inputType">Input Type:</label>
+        <!-- Choose between raw counts or percentages -->
+        <select id="inputType">
+          <option value="counts">Counts</option>
+          <option value="proportions">Proportions (%)</option>
+        </select>
+      </div>
+      <div>
+        <label for="sampleSize">Total Sample Size (n):</label>
+        <!-- In "Counts" mode, this may auto-update to sum(counts) -->
+        <input type="number" id="sampleSize" min="1" value="200">
+      </div>
+    </div>
+
+    <!-- Dynamic variable rows render here -->
+    <div id="variableInputsContainer"></div>
+
+    <div class="controls">
+      <button class="add-btn" id="addVariableBtn">✚ Add Variable</button>
+      <span id="variableCounter">Variables: 0</span>
+    </div>
+  </div>
+
+  <!-- Panel 2: Initial Analysis & CI -->
+  <div class="panel" id="panel-initial">
+    <h1>📈 Initial Analysis & CI</h1>
+    <div id="warning-container"></div>
+    <div id="results-container"><p class="placeholder">Confidence intervals will appear here.</p></div>
+    <div id="test-results-container" class="test-results-box" style="display:none;"></div>
+  </div>
+
+  <!-- Panel 3: Post-Hoc Comparisons -->
+  <div class="panel" id="panel-posthoc">
+    <h1>🔍 Post-Hoc Comparisons</h1>
+    <div id="posthoc-results-container">
+      <p class="placeholder">Post-hoc results appear here when the main test is significant.</p>
+    </div>
+  </div>
+
+  <!-- Panel 4: About (compact, with tiny "?" popup) -->
+  <div class="panel" id="panel-about" aria-labelledby="aboutHeading">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+      <h1 id="aboutHeading" style="font-size:0.95rem; margin:0;">About</h1>
+      <button id="aboutBtn" title="About this tool" aria-haspopup="dialog">?</button>
+    </div>
+
+    <!-- Ultra-brief always-visible chi-square crib notes -->
+    <div style="margin-top:10px; font-size:0.92rem; color:var(--muted-color);">
+      <strong>Chi-Square (χ²)</strong>
+      <ul style="margin:8px 0 0 16px; padding:0;">
+        <li><em>Goodness-of-fit:</em> do proportions differ beyond chance?</li>
+        <li><em>df:</em> k − 1 (k = number of groups)</li>
+        <li><em>p-value:</em> small → unlikely by chance → “different”</li>
+        <li><em>Post-hoc:</em> pairwise z-tests (Bonferroni)</li>
+      </ul>
+    </div>
+
+    <!-- Lightweight dialog with fuller guidance -->
+    <dialog id="aboutDialog">
+      <form method="dialog" style="margin:0; display:flex; justify-content:flex-end;">
+        <button style="background:#444; border-radius:6px; padding:6px 10px; font-weight:600;">Close</button>
+      </form>
+      <div style="margin-top:10px;">
+        <h3 style="margin-top:0;">About this Tool</h3>
+        <p style="color:var(--muted-color);">
+          Explore <strong>proportions</strong> with live <strong>95% confidence intervals</strong> and an omnibus
+          <strong>χ² test</strong>. If significant, see which pairs differ via <strong>Bonferroni-corrected</strong> z-tests.
+        </p>
+        <ul style="margin-left:18px;">
+          <li><strong>Counts vs. Proportions</strong>: enter raw counts or % per group.</li>
+          <li><strong>Total n</strong> affects CI width (bigger n → narrower CIs).</li>
+          <li><strong>CI bars</strong> show the estimate (marker) and its 95% range.</li>
+          <li><strong>χ²</strong> asks: are group proportions different beyond chance?</li>
+          <li><strong>Post-hoc</strong> flags which pairs differ when χ² is significant.</li>
+        </ul>
+        <p style="font-style:italic; color:#bbb; margin-bottom:0;">
+          Part of Prof. Frank J. Fedel’s interactive series. This version originated with Gemini 2.5 Pro.
+        </p>
+      </div>
+    </dialog>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================================
+   Client-side logic: live updates on any input change.
+   Flow: add rows → compute effective n → proportions & CIs → χ² → (optional) post-hoc
+   ============================================================================ */
+document.addEventListener('DOMContentLoaded', function () {
+  // DOM refs
+  const mainContainer = document.querySelector('.dashboard-container');
+  const variableInputsContainer = document.getElementById('variableInputsContainer');
+  const addVariableBtn = document.getElementById('addVariableBtn');
+  const variableCounterEl = document.getElementById('variableCounter');
+  const testResultsContainer = document.getElementById('test-results-container');
+  const postHocContainer = document.getElementById('posthoc-results-container');
+
+  // About dialog wiring
+  const aboutBtn = document.getElementById('aboutBtn');
+  const aboutDialog = document.getElementById('aboutDialog');
+  if (aboutBtn && aboutDialog){
+    aboutBtn.addEventListener('click', () => {
+      if (typeof aboutDialog.showModal === 'function') aboutDialog.showModal();
+      else aboutDialog.setAttribute('open',''); // fallback
+    });
+    // close on Escape (native dialog handles this via 'cancel')
+    aboutDialog.addEventListener('cancel', () => aboutDialog.close());
+  }
+
+  // State / constants
+  let variableIdCounter = 0;
+  const MAX_VARIABLES = 6;
+  const defaultNames = ['A','B','C','D','E','F'];
+  const Z_SCORE_95 = 1.96;
+  let currentVariables = []; // { name, value, proportion, count, n, residual }
+
+  // Add variable row: Name | Value | Remove
+  function addVariableRow(){
+    if (variableInputsContainer.children.length >= MAX_VARIABLES) return;
+
+    const newIndex = variableIdCounter++;
+    const row = document.createElement('div');
+    row.className = 'variable-input';
+    row.innerHTML = `
+      <input type="text" placeholder="Variable Name" value="${defaultNames[newIndex] || 'Var '+(newIndex+1)}" class="var-name">
+      <input type="number" placeholder="Value" min="0" class="var-value">
+      <button class="remove-btn" title="Remove Variable">✖</button>
+    `;
+    variableInputsContainer.appendChild(row);
+    updateCounter();
+
+    row.querySelector('.remove-btn').addEventListener('click', () => {
+      row.remove();
+      calculateAndDisplay();
+    });
+  }
+
+  function updateCounter(){
+    const nRows = variableInputsContainer.children.length;
+    variableCounterEl.textContent = `Variables: ${nRows}`;
+    addVariableBtn.disabled = nRows >= MAX_VARIABLES;
+  }
+
+  function calculateAndDisplay(){
+    const inputType = document.getElementById('inputType').value;
+    const sampleSizeInput = document.getElementById('sampleSize');
+    let sampleSizeValue = parseInt(sampleSizeInput.value, 10);
+
+    document.getElementById('warning-container').innerHTML = '';
+    let effectiveN = sampleSizeValue;
+    currentVariables = [];
+
+    // In "Counts" mode, sync n with sum(counts) if possible
+    if (inputType === 'counts'){
+      let sumCounts = 0;
+      variableInputsContainer.querySelectorAll('.variable-input .var-value').forEach(el => {
+        const v = parseFloat(el.value);
+        if (!isNaN(v) && v >= 0) sumCounts += v;
+      });
+      if (sumCounts > 0 && sumCounts !== sampleSizeValue){
+        document.getElementById('warning-container').innerHTML =
+          `<strong>Auto-Correction:</strong> Sample size updated from ${sampleSizeValue} to match sum of counts (${sumCounts}).`;
+        sampleSizeInput.value = sumCounts;
+        effectiveN = sumCounts;
+      } else {
+        effectiveN = sumCounts > 0 ? sumCounts : sampleSizeValue;
+      }
+    } else {
+      // In % mode, we use provided n to convert % → counts (for tests)
+      effectiveN = sampleSizeValue;
+    }
+
+    // Build variable list
+    variableInputsContainer.querySelectorAll('.variable-input').forEach(row => {
+      const name = row.querySelector('.var-name').value || '';
+      const val = parseFloat(row.querySelector('.var-value').value);
+      if (!isNaN(val) && val >= 0){
+        const proportion = (inputType === 'counts') ? (val / effectiveN) : (val / 100);
+        const count = (inputType === 'counts') ? val : (val / 100) * effectiveN;
+        currentVariables.push({ name, value: val, proportion, count, n: effectiveN });
+      }
+    });
+
+    // Nothing to show yet
+    if (!effectiveN || effectiveN <= 0 || currentVariables.length === 0){
+      displayResults([]);
+      testResultsContainer.style.display = 'none';
+      postHocContainer.innerHTML = `<p class="placeholder">Post-hoc results appear here when the main test is significant.</p>`;
+      return;
+    }
+
+    // Pearson residuals (vs equal shares) for visualization hue
+    const k = currentVariables.length;
+    const expectedCount = effectiveN / k;
+    currentVariables.forEach(v => {
+      v.residual = (v.count - expectedCount) / Math.sqrt(expectedCount);
+    });
+    const maxAbsResidual = Math.max(...currentVariables.map(v => Math.abs(v.residual)), 0);
+
+    // CI rows
+    const rows = currentVariables.map(v => {
+      const p = v.proportion;
+      const se = Math.sqrt((p * (1 - p)) / effectiveN);
+      const me = Z_SCORE_95 * se;
+
+      // color hue nudged by residual
+      let hue = 207;
+      if (maxAbsResidual > 0.001){
+        const norm = v.residual / maxAbsResidual;
+        hue = 207 - norm * 60;
+      }
+      return {
+        name: v.name,
+        proportionPercent: p * 100,
+        ciLower: Math.max(0, p - me) * 100,
+        ciUpper: Math.min(1, p + me) * 100,
+        barColor: `hsl(${hue},80%,50%)`
+      };
+    });
+
+    displayResults(rows);
+    updateCounter();
+    runAutomaticTests(); // omnibus → (maybe) post-hoc
+  }
+
+  function runAutomaticTests(){
+    if (currentVariables.length < 2){
+      testResultsContainer.style.display = 'none';
+      postHocContainer.innerHTML = `<p class="placeholder">Post-hoc results appear here when the main test is significant.</p>`;
+      return;
+    }
+
+    const observed = currentVariables.map(v => v.count);
+    const k = observed.length;
+    const totalN = observed.reduce((a,b) => a + b, 0);
+    const expected = totalN / k;
+
+    const chi2 = observed.reduce((sum, o) => sum + Math.pow(o - expected, 2) / expected, 0);
+    const df = k - 1;
+
+    // 0.05 critical values for small df
+    const crit = {1:3.84, 2:5.99, 3:7.81, 4:9.49, 5:11.07}[df];
+
+    let conclusion = '', isSig = false;
+    if (crit !== undefined){
+      if (chi2 > crit){
+        isSig = true;
+        conclusion = `<p><strong>Conclusion:</strong> <span class="significant">Statistically significant</span> (p &lt; 0.05). Proportions likely differ.</p>`;
+      } else {
+        conclusion = `<p><strong>Conclusion:</strong> <span class="not-significant">Not statistically significant</span> (p &gt; 0.05). No evidence of different proportions.</p>`;
+      }
+    } else {
+      conclusion = `<p><em>Note:</em> df=${df} exceeds preloaded table range.</p>`;
+    }
+
+    testResultsContainer.innerHTML = `
+      <h3>Chi-Squared Test (goodness-of-fit)</h3>
+      <p style="color:var(--muted-color); font-size:0.9em; margin-top:-6px;">
+        Tests whether the groups’ proportions differ beyond what random variation would predict.
+      </p>
+      <ul>
+        <li><strong>χ² Statistic:</strong> ${chi2.toFixed(3)}</li>
+        <li><strong>df:</strong> ${df}</li>
+      </ul>
+      ${conclusion}
+    `;
+    testResultsContainer.style.display = 'block';
+
+    if (isSig) runAndDisplayPostHocTest();
+    else postHocContainer.innerHTML = `<p class="placeholder">Post-hoc test not run because the main test was not significant.</p>`;
+  }
+
+  // Pairwise two-proportion z-tests with Bonferroni correction
+  function runAndDisplayPostHocTest(){
+    const k = currentVariables.length;
+    const m = k * (k - 1) / 2;           // number of pairwise comparisons
+    const alphaAdj = 0.05 / m;
+
+    const comps = [];
+    for (let i=0;i<k;i++){
+      for (let j=i+1;j<k;j++){
+        const v1 = currentVariables[i], v2 = currentVariables[j];
+        const pPool = (v1.count + v2.count) / (v1.n + v2.n);
+        const se = Math.sqrt(pPool * (1 - pPool) * (1/v1.n + 1/v2.n));
+        const z = se === 0 ? 0 : (v1.proportion - v2.proportion) / se;
+        const p = zToPValue(z);
+        comps.push({ v1:v1.name, v2:v2.name, p, sig:(p < alphaAdj) });
+      }
+    }
+
+    const names = currentVariables.map(v => v.name);
+    let html = `
+      <p>Significant differences (p &lt; ${alphaAdj.toFixed(4)}) are shown in green (✔ = pair differs).</p>
+      <table class="posthoc-table">
+        <thead><tr><th>&nbsp;</th>${names.map(n=>`<th>${n}</th>`).join('')}</tr></thead>
+        <tbody>
+    `;
+
+    names.forEach((rName, i) => {
+      html += `<tr><td>${rName}</td>`;
+      names.forEach((cName, j) => {
+        if (i >= j){
+          html += `<td style="background:#222;">&nbsp;</td>`;
+        } else {
+          const comp = comps.find(x => x.v1===rName && x.v2===cName);
+          if (comp && comp.sig){
+            const opacity = Math.max(0.2, 1 - (comp.p / alphaAdj));
+            html += `<td style="background:rgba(var(--success-color-rgb),${opacity})" title="Significant (p=${comp.p.toExponential(1)})">✔</td>`;
+          } else if (comp){
+            html += `<td title="Not Significant (p=${comp.p.toFixed(3)})">—</td>`;
+          } else {
+            html += `<td>—</td>`;
+          }
+        }
+      });
+      html += `</tr>`;
+    });
+
+    html += `</tbody></table>`;
+    postHocContainer.innerHTML = html;
+  }
+
+  function displayResults(results){
+    const container = document.getElementById('results-container');
+    if (!results.length){
+      container.innerHTML = `<p class="placeholder">Confidence intervals will appear here.</p>`;
+      return;
+    }
+    container.innerHTML = `
+      <table class="results-table">
+        <thead>
+          <tr><th>Variable</th><th>Proportion</th><th>95% CI</th><th>Visual</th></tr>
+        </thead>
+        <tbody>
+          ${results.map(r => `
+            <tr>
+              <td>${r.name}</td>
+              <td>${r.proportionPercent.toFixed(1)}%</td>
+              <td>${r.ciLower.toFixed(1)}% to ${r.ciUpper.toFixed(1)}%</td>
+              <td class="graph-cell">${createGraphBar(r)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function createGraphBar({ciLower, ciUpper, proportionPercent, barColor}){
+    const width = Math.max(0, ciUpper - ciLower);
+    return `
+      <div class="ci-graph" title="CI: ${ciLower.toFixed(1)}% – ${ciUpper.toFixed(1)}%">
+        <div class="ci-bar" style="left:${ciLower}%; width:${width}%; background:${barColor};"></div>
+        <div class="ci-marker" style="left:${proportionPercent}%" title="Proportion: ${proportionPercent.toFixed(1)}%"></div>
+      </div>
+    `;
+  }
+
+  // Two-sided p-value from z (fast approximation suitable for teaching/demo)
+  function zToPValue(z){
+    const zAbs = Math.abs(z);
+    if (zAbs > 37) return 0; // underflow guard
+    const p = Math.exp(-0.5 * zAbs * zAbs);
+    if (zAbs < 2.2){
+      // polynomial approximation for central area
+      return p * (2.025032 + zAbs * (-0.320494 + zAbs * (-0.298839 + zAbs * (1.839511 + zAbs * (-0.738888 + zAbs * 0.146428)))));
+    }
+    // tail via continued fraction
+    return p / (zAbs + 1.0 / (zAbs + 2.0 / (zAbs - 1.0)));
+  }
+
+  // Wire up events + friendly default (two variables)
+  addVariableBtn.addEventListener('click', addVariableRow);
+  mainContainer.addEventListener('input', calculateAndDisplay);
+
+  addVariableRow();
+  addVariableRow();
+  calculateAndDisplay();
+});
+</script>
+
+</body>
+</html>
