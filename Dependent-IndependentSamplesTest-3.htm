@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR Learning Analytics Dashboard</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; --panel: #ffffff; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); margin: 0; height: 100vh; overflow: hidden; font-size: 11px; }
+        .dashboard { display: grid; grid-template-rows: auto 1fr; height: 100vh; padding: 10px; box-sizing: border-box; gap: 8px; }
+        header { text-align: center; border-bottom: 1px solid #ddd; padding-bottom: 2px; }
+        h1 { margin: 0; font-size: 1.1rem; }
+        
+        .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; overflow: hidden; }
+        .section { background: var(--panel); border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; padding: 10px; overflow: hidden; }
+        
+        .input-row { display: flex; gap: 8px; margin-bottom: 5px; }
+        .input-box { flex: 1; }
+        label { display: block; font-weight: bold; margin-bottom: 2px; }
+        textarea { width: 100%; height: 35px; font-family: monospace; font-size: 9px; resize: none; border: 1px solid #cbd5e1; border-radius: 4px; }
+        
+        .viz-container { height: 28vh; display: flex; justify-content: space-around; border-bottom: 1px solid #f1f5f9; margin-bottom: 5px; }
+        canvas { background: #fff; max-width: 100%; height: 100%; }
+
+        .stats-panel { flex: 1; overflow-y: auto; }
+        .formula { background: #f1f5f9; padding: 3px; border-radius: 4px; font-family: serif; font-size: 1.2em; text-align: center; margin: 3px 0; }
+        .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 5px; }
+        .stat-card { border: 1px solid #e2e8f0; padding: 3px; border-radius: 4px; text-align: center; background: #fff; }
+        .stat-val { font-weight: bold; color: var(--primary); font-size: 1rem; display: block;}
+        
+        .btn-update { background: var(--primary); color: white; border: none; padding: 4px; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 5px; font-weight: bold;}
+        p { margin: 2px 0; line-height: 1.2; color: #475569; }
+        .test-names { font-style: italic; color: #64748b; font-size: 0.9em; margin-bottom: 4px; display: block;}
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <header><h1>VR Educational Research: T-Test Comparison Dashboard</h1></header>
+
+    <div class="main-content">
+        <div class="section">
+            <span class="test-names">Also known as: Independent Measures, Between-Subjects, Unpaired T-Test</span>
+            <div class="input-row">
+                <div class="input-box">
+                    <label>Control (Pre, Post)</label>
+                    <textarea id="indA">72,75&#10;68,70&#10;85,88&#10;70,72&#10;77,82&#10;64,68&#10;80,81&#10;58,65&#10;90,92&#10;75,78</textarea>
+                </div>
+                <div class="input-box">
+                    <label>VR Group (Pre, Post)</label>
+                    <textarea id="indB">70,85&#10;65,82&#10;88,94&#10;72,88&#10;75,90&#10;62,80&#10;82,92&#10;55,75&#10;92,98&#10;78,92</textarea>
+                </div>
+            </div>
+            
+            <div class="viz-container">
+                <canvas id="canIndA" width="200" height="180"></canvas>
+                <canvas id="canIndB" width="200" height="180"></canvas>
+            </div>
+
+            <div class="stats-panel">
+                <strong>Independent Samples T-Test (on Deltas)</strong>
+                <p>Calculates the difference of the differences. Ideal for comparing the effectiveness of two different teaching modalities.</p>
+                <div class="formula">$$t = \frac{\bar{\Delta}_1 - \bar{\Delta}_2}{s_p \sqrt{\frac{2}{n}}}$$</div>
+                <div id="resInd" class="result-grid"></div>
+            </div>
+            <button class="btn-update" onclick="calculateAll()">RECALCULATE ALL</button>
+        </div>
+
+        <div class="section">
+            <span class="test-names">Also known as: Paired Samples, Within-Subjects, Repeated Measures T-Test</span>
+            <div class="input-row">
+                <div class="input-box">
+                    <label>Pre/Post Data (Paste Pairs)</label>
+                    <textarea id="depData" style="height: 35px;">65,82&#10;70,88&#10;60,75&#10;80,95&#10;55,80&#10;72,90&#10;68,85&#10;75,92&#10;82,98&#10;50,78</textarea>
+                </div>
+                <div class="input-box"><p>This test focuses purely on the <i>consistency</i> of improvement within individuals.</p></div>
+            </div>
+
+            <div class="viz-container">
+                <canvas id="canDep" width="400" height="180"></canvas>
+            </div>
+
+            <div class="stats-panel">
+                <strong>Paired Samples T-Test</strong>
+                <p>Compares the means of two measurements taken from the same individual. High power as it removes inter-subject variability.</p>
+                <div class="formula">$$t = \frac{\bar{\Delta}}{SD_{\Delta} / \sqrt{n}}$$</div>
+                <div id="resDep" class="result-grid"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+<script>
+function parse(id) {
+    return document.getElementById(id).value.trim().split('\n').map(l => {
+        const p = l.split(',').map(Number);
+        return { pre: p[0], post: p[1], delta: p[1] - p[0] };
+    }).filter(d => !isNaN(d.delta));
+}
+
+function getStats(arr) {
+    const n = arr.length;
+    const mean = arr.reduce((a, b) => a + b, 0) / n;
+    const variance = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (n - 1);
+    return { n, mean, var: variance, sd: Math.sqrt(variance) };
+}
+
+function draw(canvasId, data, title) {
+    const can = document.getElementById(canvasId);
+    const ctx = can.getContext('2d');
+    ctx.clearRect(0,0,can.width,can.height);
+    const pad = 25;
+    const getY = (s) => can.height - pad - ((s-45)/55 * (can.height-2*pad));
+    ctx.font = "bold 9px sans-serif";
+    ctx.fillStyle = "#334155";
+    ctx.fillText(title, 10, 12);
+    data.forEach((d, i) => {
+        const color = `hsla(${i * 36}, 70%, 55%, 0.8)`;
+        ctx.strokeStyle = color; ctx.fillStyle = color;
+        const y1 = getY(d.pre), y2 = getY(d.post);
+        ctx.beginPath(); ctx.lineWidth = 1.5; ctx.moveTo(40, y1); ctx.lineTo(can.width-40, y2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(40, y1, 2.5, 0, 7); ctx.arc(can.width-40, y2, 2.5, 0, 7); ctx.fill();
+    });
+}
+
+function calculateAll() {
+    // Independent
+    const a = parse('indA'), b = parse('indB');
+    draw('canIndA', a, "CONTROL (Slope)"); draw('canIndB', b, "VR GROUP (Slope)");
+    const s1 = getStats(a.map(d => d.delta)), s2 = getStats(b.map(d => d.delta));
+    const sp = Math.sqrt((s1.var + s2.var) / 2);
+    const tInd = (s2.mean - s1.mean) / (sp * Math.sqrt(2/10));
+    
+    document.getElementById('resInd').innerHTML = `
+        <div class="stat-card">Control Mean Δ<span class="stat-val">+${s1.mean.toFixed(1)}</span></div>
+        <div class="stat-card">VR Mean Δ<span class="stat-val">+${s2.mean.toFixed(1)}</span></div>
+        <div class="stat-card">t-statistic<span class="stat-val">${tInd.toFixed(3)}</span></div>
+        <div class="stat-card">Control SD Δ<span class="stat-val">${s1.sd.toFixed(2)}</span></div>
+        <div class="stat-card">VR SD Δ<span class="stat-val">${s2.sd.toFixed(2)}</span></div>
+        <div class="stat-card">Result<span class="stat-val">${Math.abs(tInd) > 2.1 ? 'Significant' : 'Not Sig.'}</span></div>`;
+
+    // Dependent
+    const dep = parse('depData');
+    draw('canDep', dep, "Within-Subject Pre/Post Comparison");
+    const ds = getStats(dep.map(d => d.delta));
+    const tDep = ds.mean / (ds.sd / Math.sqrt(ds.n));
+
+    document.getElementById('resDep').innerHTML = `
+        <div class="stat-card">Avg Pre-Score<span class="stat-val">${getStats(dep.map(d=>d.pre)).mean.toFixed(1)}%</span></div>
+        <div class="stat-card">Avg Post-Score<span class="stat-val">${getStats(dep.map(d=>d.post)).mean.toFixed(1)}%</span></div>
+        <div class="stat-card">t-statistic<span class="stat-val">${tDep.toFixed(3)}</span></div>
+        <div class="stat-card">Mean Delta (Δ)<span class="stat-val">+${ds.mean.toFixed(1)}</span></div>
+        <div class="stat-card">SD of Delta<span class="stat-val">${ds.sd.toFixed(2)}</span></div>
+        <div class="stat-card">Result<span class="stat-val">${Math.abs(tDep) > 2.2 ? 'Significant' : 'Not Sig.'}</span></div>`;
+    
+    if(window.MathJax) MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+}
+
+window.onload = calculateAll;
+</script>
+</body>
+</html>
