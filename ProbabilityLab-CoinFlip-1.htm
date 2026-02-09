@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Probability Lab | Coin Flip</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #38bdf8;
+            --heads-color: #fbbf24;
+            --tails-color: #818cf8;
+            --success: #4ade80;
+            --danger: #f87171;
+            --text: #f1f5f9;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+
+        h2 { margin-bottom: 1.5rem; font-weight: 300; letter-spacing: 1px; }
+
+        .controls { display: flex; gap: 1rem; justify-content: center; margin-bottom: 2rem; }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        button:active { transform: scale(0.95); }
+        .btn-heads { background: var(--heads-color); color: #000; }
+        .btn-tails { background: var(--tails-color); color: #fff; }
+
+        .stat-row { margin-bottom: 1.5rem; text-align: left; }
+        .label { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; }
+        
+        .bar-bg { background: #334155; height: 12px; border-radius: 6px; overflow: hidden; }
+        .bar-fill { height: 100%; width: 0%; transition: width 0.3s ease-out; }
+
+        #heads-bar { background: var(--heads-color); }
+        #tails-bar { background: var(--tails-color); }
+
+        .results-panel {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #334155;
+        }
+
+        .chi-val { font-family: monospace; font-size: 1.2rem; color: var(--accent); }
+        .status { margin-top: 1rem; font-weight: bold; padding: 0.5rem; border-radius: 4px; }
+        .fair { color: var(--success); background: rgba(74, 222, 128, 0.1); }
+        .not-fair { color: var(--danger); background: rgba(248, 113, 113, 0.1); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Probability Lab</h2>
+    
+    <div class="controls">
+        <button class="btn-heads" onclick="recordFlip('heads')">FLIP HEADS</button>
+        <button class="btn-tails" onclick="recordFlip('tails')">FLIP TAILS</button>
+    </div>
+
+    <div class="stat-row">
+        <div class="label"><span>Heads</span> <span id="heads-count">0</span></div>
+        <div class="bar-bg"><div id="heads-bar" class="bar-fill"></div></div>
+    </div>
+
+    <div class="stat-row">
+        <div class="label"><span>Tails</span> <span id="tails-count">0</span></div>
+        <div class="bar-bg"><div id="tails-bar" class="bar-fill"></div></div>
+    </div>
+
+    <div id="results-panel" class="results-panel" style="display:none;">
+        <div>Chi-Square: <span id="chi-stat" class="chi-val">0.00</span></div>
+        <div>P-Value: <span id="p-val" class="chi-val">1.00</span></div>
+        <div id="fairness-msg" class="status">Waiting for data...</div>
+    </div>
+</div>
+
+<script>
+    let flips = { heads: 0, tails: 0 };
+
+    function recordFlip(result) {
+        flips[result]++;
+        document.getElementById('results-panel').style.display = 'block';
+        updateUI();
+        performChiSquareTest();
+    }
+
+    function updateUI() {
+        const total = flips.heads + flips.tails;
+        document.getElementById('heads-count').innerText = flips.heads;
+        document.getElementById('tails-count').innerText = flips.tails;
+
+        // Calculate percentages for the bars
+        const headsPct = total > 0 ? (flips.heads / total * 100) : 0;
+        const tailsPct = total > 0 ? (flips.tails / total * 100) : 0;
+
+        document.getElementById('heads-bar').style.width = headsPct + '%';
+        document.getElementById('tails-bar').style.width = tailsPct + '%';
+    }
+
+    function performChiSquareTest() {
+        const totalFlips = flips.heads + flips.tails;
+        if (totalFlips === 0) return;
+
+        const expected = totalFlips / 2;
+        const chiSquare = Math.pow(flips.heads - expected, 2) / expected + 
+                         Math.pow(flips.tails - expected, 2) / expected;
+        
+        // Using your original approximation logic
+        const pValue = Math.exp(-0.5 * chiSquare);
+        const isFair = pValue > 0.05;
+
+        document.getElementById('chi-stat').innerText = chiSquare.toFixed(2);
+        document.getElementById('p-val').innerText = pValue.toFixed(3);
+        
+        const msgBox = document.getElementById('fairness-msg');
+        msgBox.innerText = isFair ? 'Result: Likely Fair' : 'Result: Statistically Biased';
+        msgBox.className = `status ${isFair ? 'fair' : 'not-fair'}`;
+    }
+</script>
+
+</body>
+</html>
