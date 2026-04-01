@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Clinical Significance Simulator: Prosthetics</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #d35400;
+            --success: #27ae60;
+            --warning: #f1c40f;
+            --danger: #c0392b;
+            --bg: #fdfefe;
+            --card-bg: #ecf0f1;
+            --overlay: rgba(44, 62, 80, 0.9);
+        }
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.5; color: var(--primary); background-color: var(--bg); margin: 0; padding: 10px; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); position: relative; }
+        header { border-bottom: 3px solid var(--accent); margin-bottom: 20px; padding-bottom: 10px; text-align: center; position: relative; }
+        h2 { margin-bottom: 5px; color: var(--accent); }
+        h4 { margin-top: 0; font-weight: normal; color: #7f8c8d; }
+
+        /* Help Button */
+        .help-btn {
+            position: absolute;
+            right: 0;
+            top: 10px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background 0.3s;
+        }
+        .help-btn:hover { background: var(--accent); }
+
+        /* Instructions Overlay */
+        #instructionsPanel {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--overlay);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .instr-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .close-instr {
+            position: absolute;
+            top: 15px; right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        /* Rest of the original styles... */
+        .setup-panel { background-color: var(--card-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #bdc3c7; }
+        .presets-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        button.preset-btn { background-color: white; color: var(--primary); border: 2px solid #bdc3c7; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+        button.preset-btn:hover { background-color: #eee; }
+        button.preset-btn.active { background-color: var(--accent); color: white; border-color: var(--accent); }
+        .group-config { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .group-card { background: white; padding: 10px; border-radius: 6px; border: 1px solid #ddd; }
+        .group-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .group-color-dot { width: 15px; height: 15px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        input.group-name { font-weight: bold; font-size: 1.1rem; border: none; border-bottom: 1px dashed #ccc; color: var(--primary); }
+        .input-row { display: flex; align-items: center; margin-bottom: 5px; justify-content: space-between; }
+        .input-row label { font-size: 0.9rem; font-weight: bold;}
+        .input-row input[type="number"] { width: 70px; padding: 4px; text-align: right; }
+        .controls-panel { margin-bottom: 20px; }
+        .slider-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
+        input[type="range"] { width: 100%; cursor: pointer; height: 10px; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { padding: 15px; border-radius: 8px; color: white; display: flex; flex-direction: column; justify-content: space-between; }
+        .stat-main { display: flex; align-items: baseline; justify-content: center; margin: 10px 0; }
+        .stat-value { font-size: 2.2rem; font-weight: bold; margin-right: 5px; }
+        .stat-unit { font-size: 1rem; opacity: 0.8; }
+        .stat-label { font-size: 0.85rem; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
+        .stat-sub { font-size: 0.9rem; text-align: center; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 5px; }
+        .visuals { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 15px; }
+        @media (max-width: 768px) { .visuals { grid-template-columns: 1fr; } .help-btn { position: relative; top: 0; margin-bottom: 10px; } }
+        .chart-wrapper { background: white; padding: 10px; border: 1px solid #ddd; border-radius: 8px; height: 350px; }
+        .footer-note { margin-top: 20px; font-size: 0.8rem; color: #95a5a6; border-top: 1px solid #eee; padding-top: 10px; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div id="instructionsPanel">
+    <div class="instr-content">
+        <span class="close-instr" onclick="toggleInstructions()">&times;</span>
+        <h3 style="color:var(--accent)">How to Use This Simulator</h3>
+        <p><strong>Goal:</strong> Explore how Sample Size ($N$) influences P-values and Clinical Significance.</p>
+        <hr>
+        <ul>
+            <li><strong>1. Adjust Parameters:</strong> Change the Mean walking speeds and Standard Deviations for two groups of prosthetic users.</li>
+            <li><strong>2. Titrate Sample Size:</strong> Move the slider to see how increasing $N$ makes even tiny differences "Statistically Significant" ($p < 0.05$).</li>
+            <li><strong>3. Watch the Charts:</strong> 
+                <ul>
+                    <li><em>Left Chart:</em> Shows the population overlap. High overlap = Low clinical impact.</li>
+                    <li><em>Right Chart:</em> Shows the Confidence Interval. If it crosses 0, the result is not significant.</li>
+                </ul>
+            </li>
+            <li><strong>4. Evaluate Effect Size:</strong> Watch the orange "Effect Size" card to see if the difference is actually meaningful in a clinic.</li>
+        </ul>
+        <p style="font-size: 0.85rem; color: #7f8c8d; border-top: 1px solid #eee; padding-top: 10px;">
+            <strong>Origin:</strong> Developed by Prof. Fedel using Gemini 3 Flash (2026) for Prosthetics & Orthotics education.
+        </p>
+    </div>
+</div>
+
+<div class="container">
+    <header>
+        <h2>Advanced Clinical Significance Simulator</h2>
+        <h4>Walking Speed in Prosthetic & Amputee Populations</h4>
+        <button class="help-btn" onclick="toggleInstructions()">Help & Instructions</button>
+    </header>
+
+    <div class="setup-panel">
+        <div class="presets-row">
+            <button class="preset-btn active" onclick="loadPreset('tta_tfa')">TTA vs. TFA</button>
+            <button class="preset-btn" onclick="loadPreset('norm_tta')">Control vs. TTA</button>
+            <button class="preset-btn" onclick="loadPreset('intervention')">Generic: Intervention</button>
+        </div>
+
+        <div class="group-config">
+            <div class="group-card">
+                <div class="group-header">
+                    <div><span class="group-color-dot" style="background-color: #7f8c8d;"></span><input type="text" id="g1_name" class="group-name" value="TTA Group" onchange="calculate()"></div>
+                </div>
+                <div class="input-row"><label>Mean Speed (m/s):</label><input type="number" id="g1_mean" value="1.18" step="0.01" onchange="calculate()"></div>
+                <div class="input-row"><label>SD (m/s):</label><input type="number" id="g1_sd" value="0.12" step="0.01" onchange="calculate()"></div>
+            </div>
+            <div class="group-card">
+                <div class="group-header">
+                    <div><span class="group-color-dot" style="background-color: #d35400;"></span><input type="text" id="g2_name" class="group-name" value="TFA Group" onchange="calculate()"></div>
+                </div>
+                <div class="input-row"><label>Mean Speed (m/s):</label><input type="number" id="g2_mean" value="1.02" step="0.01" onchange="calculate()"></div>
+                <div class="input-row"><label>SD (m/s):</label><input type="number" id="g2_sd" value="0.15" step="0.01" onchange="calculate()"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls-panel">
+        <div class="slider-header"><span>Sample Size per Group (N)</span><span id="n_display" style="color: var(--accent);">50</span></div>
+        <input type="range" id="n_slider" min="0" max="1000" value="398" step="1" oninput="calculate()">
+    </div>
+
+    <div class="dashboard">
+        <div class="stat-card" id="card_p" style="background-color: #34495e;">
+            <div class="stat-label">Inferential Statistics</div>
+            <div class="stat-main"><span class="stat-value" id="res_p">0.050</span></div>
+            <div class="stat-sub" id="res_p_interp">P-Value</div>
+        </div>
+        <div class="stat-card" style="background-color: #27ae60;">
+            <div class="stat-label">Difference (95% CI)</div>
+            <div class="stat-main"><span class="stat-value" id="res_diff">0.00</span><span class="stat-unit">m/s</span></div>
+            <div class="stat-sub" id="res_ci">[0.00, 0.00]</div>
+        </div>
+        <div class="stat-card" id="card_d" style="background-color: #f39c12;">
+            <div class="stat-label">Effect Size</div>
+            <div class="stat-main"><span class="stat-value" id="res_d">0.00</span></div>
+            <div class="stat-sub" id="res_d_interp">Cohen's d</div>
+        </div>
+    </div>
+
+    <div class="visuals">
+        <div class="chart-wrapper"><canvas id="distChart"></canvas></div>
+        <div class="chart-wrapper"><canvas id="ciChart"></canvas></div>
+    </div>
+
+    <div class="footer-note">
+        <p>Developed by Professor Fedel using Gemini 3 Flash - March 2026</p>
+    </div>
+</div>
+
+<script>
+    const ALPHA = 0.05;
+    let charts = {};
+    const nMin = 3, nMax = 10000, minSlider = 0, maxSlider = 1000;
+    const scaleN = (Math.log(nMax) - Math.log(nMin)) / (maxSlider - minSlider);
+
+    function toggleInstructions() {
+        const panel = document.getElementById('instructionsPanel');
+        panel.style.display = (panel.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    function sliderToN(v) { return Math.round(nMin * Math.exp(scaleN * (v - minSlider))); }
+    function nToSlider(n) { return Math.round(Math.log(n / nMin) / scaleN + minSlider); }
+
+    function normalCDF(x) {
+        const t = 1 / (1 + 0.2316419 * Math.abs(x));
+        const d = 0.3989423 * Math.exp(-x * x / 2);
+        const prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+        return x > 0 ? 1 - prob : prob;
+    }
+
+    function runTest(m1, s1, m2, s2, n) {
+        const diff = m2 - m1;
+        const pooledSD = Math.sqrt(((n-1)*s1**2 + (n-1)*s2**2)/(2*n-2));
+        const cohensD = diff / pooledSD;
+        const seDiff = Math.sqrt((s1**2/n) + (s2**2/n));
+        const p = 2 * (1 - normalCDF(Math.abs(diff / seDiff)));
+        return { diff, cohensD, p, ciL: diff - 1.96*seDiff, ciU: diff + 1.96*seDiff };
+    }
+
+    function calculate() {
+        const n = sliderToN(parseInt(document.getElementById('n_slider').value));
+        const g1 = { name: document.getElementById('g1_name').value, mean: parseFloat(document.getElementById('g1_mean').value), sd: parseFloat(document.getElementById('g1_sd').value) };
+        const g2 = { name: document.getElementById('g2_name').value, mean: parseFloat(document.getElementById('g2_mean').value), sd: parseFloat(document.getElementById('g2_sd').value) };
+        
+        document.getElementById('n_display').innerText = n.toLocaleString();
+        const stats = runTest(g1.mean, g1.sd, g2.mean, g2.sd, n);
+        
+        updateDashboard(stats);
+        updateDistributionChart(g1, g2);
+        updateCIChart(stats);
+    }
+
+    function updateDashboard(s) {
+        const pEl = document.getElementById('res_p');
+        pEl.innerText = s.p < 0.001 ? "< 0.001" : s.p.toFixed(3);
+        document.getElementById('card_p').style.backgroundColor = s.p < ALPHA ? 'var(--success)' : '#34495e';
+        document.getElementById('res_p_interp').innerText = s.p < ALPHA ? "Significantly Different" : "Not Significant";
+
+        document.getElementById('res_diff').innerText = Math.abs(s.diff).toFixed(2);
+        document.getElementById('res_ci').innerText = `[${s.ciL.toFixed(2)}, ${s.ciU.toFixed(2)}]`;
+
+        const dAbs = Math.abs(s.cohensD);
+        document.getElementById('res_d').innerText = dAbs.toFixed(2);
+        let dText = "Negligible Impact";
+        let dColor = "#95a5a6";
+        if (dAbs >= 0.2) { dText = "Small Impact"; dColor = "#f1c40f"; }
+        if (dAbs >= 0.5) { dText = "Medium Impact"; dColor = "var(--warning)"; }
+        if (dAbs >= 0.8) { dText = "Large Impact"; dColor = "var(--accent)"; }
+        document.getElementById('res_d_interp').innerText = dText;
+        document.getElementById('card_d').style.backgroundColor = dColor;
+    }
+
+    function loadPreset(k) {
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        const config = {
+            tta_tfa: { g1: {m: 1.18, s: 0.12}, g2: {m: 1.02, s: 0.15} },
+            norm_tta: { g1: {m: 1.38, s: 0.08}, g2: {m: 1.18, s: 0.12} },
+            intervention: { g1: {m: 1.10, s: 0.15}, g2: {m: 1.15, s: 0.15} }
+        }[k];
+        document.getElementById('g1_mean').value = config.g1.m; document.getElementById('g1_sd').value = config.g1.s;
+        document.getElementById('g2_mean').value = config.g2.m; document.getElementById('g2_sd').value = config.g2.s;
+        calculate();
+    }
+
+    function initCharts() {
+        charts.dist = new Chart(document.getElementById('distChart').getContext('2d'), {
+            type: 'line',
+            data: { datasets: [{ label: 'G1', borderColor: '#7f8c8d', fill: true, pointRadius: 0 }, { label: 'G2', borderColor: '#d35400', fill: true, pointRadius: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { display: false }, x: { type: 'linear', min: 0.5, max: 1.8 } } }
+        });
+        charts.ci = new Chart(document.getElementById('ciChart').getContext('2d'), {
+            type: 'scatter',
+            data: { datasets: [{ label: 'Null', showLine: true, borderColor: 'red', borderDash: [5,5] }, { label: 'CI', showLine: true, borderColor: '#27ae60', borderWidth: 5 }, { label: 'Mean', pointBackgroundColor: '#c0392b', pointRadius: 8 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { display: false }, x: { min: -0.3, max: 0.6 } } }
+        });
+    }
+
+    function updateDistributionChart(g1, g2) {
+        const d1 = [], d2 = [];
+        for (let x = 0.5; x <= 1.8; x += 0.01) {
+            d1.push({x, y: Math.exp(-0.5 * ((x - g1.mean) / g1.sd)**2)});
+            d2.push({x, y: Math.exp(-0.5 * ((x - g2.mean) / g2.sd)**2)});
+        }
+        charts.dist.data.datasets[0].data = d1; charts.dist.data.datasets[1].data = d2;
+        charts.dist.update('none');
+    }
+
+    function updateCIChart(s) {
+        charts.ci.data.datasets[0].data = [{x: 0, y: -1}, {x: 0, y: 1}];
+        charts.ci.data.datasets[1].data = [{x: s.ciL, y: 0}, {x: s.ciU, y: 0}];
+        charts.ci.data.datasets[2].data = [{x: s.diff, y: 0}];
+        charts.ci.update('none');
+    }
+
+    window.onload = () => { initCharts(); calculate(); };
+</script>
+</body>
+</html>
